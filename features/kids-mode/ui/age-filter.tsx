@@ -9,6 +9,10 @@ interface AgeGroupConfig {
   icon: string;
   guide?: string; // 발달 단계 가이드
   recommended?: string; // 추천 도서 유형
+  color: string;
+  lightColor: string;
+  textColor: string;
+  borderColor: string;
 }
 
 const AGE_GROUPS: AgeGroupConfig[] = [
