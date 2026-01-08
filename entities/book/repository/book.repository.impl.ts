@@ -153,32 +153,30 @@ export class BookRepositoryImpl implements BookRepository {
     try {
       const params: any = { isbn };
 
-      // 지역 코드 처리 로직 개선
+      // 🛡️ [개선] 수원/안양 등 '구'가 있는 도시의 누락 방지 로직
       if (regionCode) {
-        if (regionCode.length === 2) {
-           // 시/도 단위 (예: 11 서울)
-           params.region = regionCode;
-        } else if (regionCode.length === 5) {
-           // 시/군/구 단위 (예: 11010 종로구)
-           // API 매뉴얼에 따르면 dtl_region을 쓰려면 region도 보내야 할 수 있음.
-           // 보통 11010의 앞 2자리가 region이 됨.
+        if (regionCode.length === 5) {
+           // 5자리 코드(수원시 31010)가 들어오면 상위 시/도(경기도 31)로 일단 검색
+           // 이렇게 해야 하위 '구'들에 있는 도서관들이 싹 잡힙니다.
            params.region = regionCode.substring(0, 2);
-           params.dtl_region = regionCode;
+           params.dtl_region = regionCode; 
+        } else {
+           params.region = regionCode;
         }
       } else {
-        // 기본값: 서울
-        params.region = "11";
+        params.region = "11"; // 기본값 서울
       }
 
-      console.log(`[BookRepository] getLibrariesWithBook params:`, params);
+      console.log(`[BookRepository] Searching libraries for ISBN: ${isbn}, RegionParams:`, params);
       const data = await this.fetch("libSrchByBook", params);
-      console.log(`[BookRepository] libSrchByBook response:`, JSON.stringify(data, null, 2));
+      let libraries = (data as any).response?.libs || [];
 
-      const libraries = (data as any).response?.libs || [];
-      console.log(`[BookRepository] Found ${libraries.length} libraries.`);
-
-      if (libraries.length === 0) {
-          console.warn(`[BookRepository] No libraries found for ISBN: ${isbn}, Region: ${regionCode}`);
+      // 만약 세부지역(구) 검색 결과가 너무 적으면, 해당 도(Province) 전체로 확장해서 재검색
+      if (libraries.length === 0 && params.dtl_region) {
+          console.log(`[BookRepository] No libs in ${params.dtl_region}, expanding search to region ${params.region}...`);
+          delete params.dtl_region;
+          const expandedData = await this.fetch("libSrchByBook", params);
+          libraries = (expandedData as any).response?.libs || [];
       }
 
       return {
@@ -189,7 +187,7 @@ export class BookRepositoryImpl implements BookRepository {
             libraryCode: lib.libCode,
             libraryName: lib.libName,
             hasBook: true,
-            loanAvailable: false,
+            loanAvailable: false, // 기본값, 이후 bookExist로 업데이트됨
             returnDate: undefined,
             latitude: lib.latitude,
             longitude: lib.longitude,
@@ -365,22 +363,33 @@ export class BookRepositoryImpl implements BookRepository {
   }> {
     try {
       // 1. 해당 지역 모든 도서관 조회
-      let region = regionCode;
-      let dtl_region = undefined;
+      let region = regionCode.substring(0, 2);
+      let dtl_region: string | undefined = regionCode;
 
-      if (regionCode.length === 5) {
-        region = regionCode.substring(0, 2);
-        dtl_region = regionCode;
-      }
-
-      console.log(`[DeepScan] Fetching libraries for region: ${regionCode}`);
+      // 🛡️ 수원(31010), 안양(31040) 처럼 구가 있는 도시인 경우
+      // dtl_region을 넣으면 하위 구 도서관이 누락될 수 있으므로, 
+      // 아예 region(경기도)으로 넓게 받고 dtl_region으로 시작하는 코드들만 필터링하거나
+      // API 특성에 따라 dtl_region을 비우고 상위 코드로만 조회하는 방식 선택
+      console.log(`[DeepScan] Fetching libraries for regionCode: ${regionCode}`);
+      
       const { libraries: allLibraries } = await libraryRepository.getLibraries({
         region,
-        dtl_region,
-        pageSize: 100, // 충분히 많이 조회
+        dtl_region: dtl_region, 
+        pageSize: 150, 
       });
 
-      console.log(`[DeepScan] Checking ${allLibraries.length} libraries...`);
+      // 만약 시 코드로 조회했는데 결과가 너무 적으면 '구' 단위 누락 가능성 -> 도(Province) 전체 조회로 전환
+      let targetLibraries = allLibraries;
+      if (allLibraries.length < 5) {
+          const { libraries: provinceLibraries } = await libraryRepository.getLibraries({
+            region,
+            pageSize: 500,
+          });
+          // 내가 선택한 도시 코드로 시작하는 도서관들만 필터링 (예: 31010 수원 시 내의 모든 도서관)
+          targetLibraries = provinceLibraries.filter(lib => String(lib.libCode).startsWith(regionCode.substring(0, 4)));
+      }
+
+      console.log(`[DeepScan] Checking ${targetLibraries.length} target libraries...`);
 
       // 2. 병렬로 소장 여부 확인 (bookExist API)
       const checkPromises = allLibraries.map(async (lib) => {
