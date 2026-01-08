@@ -76,32 +76,35 @@ export const useRecommendationsStore = create<RecommendationsState>()(
         const now = Date.now();
         const cacheKey = regionCode || "nationwide";
 
-        // 🛡️ 지역별 개별 캐시 체크 (데이터 섞임 원천 차단)
         if (
             familyPopularBooks[cacheKey] &&
             familyPopularBooks[cacheKey].length > 0 &&
             now - (familyPopularBooksTimestamp[cacheKey] || 0) < CACHE_DURATION
         ) {
-            console.log(`[Cache] Using ${cacheKey} specific recommendations`);
             return familyPopularBooks[cacheKey];
         }
 
         try {
-            const books = await bookRepository.getPopularBooks({
+            let books = await bookRepository.getPopularBooks({
                 region: regionCode || undefined,
                 age: "14;20;30;40", 
                 pageSize: 10,
             });
 
+            // 🛡️ [추가 Fallback] 만약 특정 구 데이터가 아예 없으면 광역 코드로 한 번 더 시도
+            if (books.length === 0 && regionCode && regionCode.length === 5) {
+                const wideRegionCode = regionCode.substring(0, 2);
+                console.log(`[Store] ${regionCode} empty, trying wide region: ${wideRegionCode}`);
+                books = await bookRepository.getPopularBooks({
+                    region: wideRegionCode,
+                    age: "14;20;30;40",
+                    pageSize: 10
+                });
+            }
+
             set((state) => ({
-                familyPopularBooks: {
-                    ...state.familyPopularBooks,
-                    [cacheKey]: books
-                },
-                familyPopularBooksTimestamp: {
-                    ...state.familyPopularBooksTimestamp,
-                    [cacheKey]: now
-                }
+                familyPopularBooks: { ...state.familyPopularBooks, [cacheKey]: books },
+                familyPopularBooksTimestamp: { ...state.familyPopularBooksTimestamp, [cacheKey]: now }
             }));
             return books;
         } catch (error) {

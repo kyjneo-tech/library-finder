@@ -211,21 +211,27 @@ export class BookRepositoryImpl implements BookRepository {
         gender: options?.gender,
         addCode: options?.addCode,
         kdc: options?.kdc,
-        startDt: options?.startDt,
-        endDt: options?.endDt,
         pageNo: options?.pageNo || 1,
         pageSize: options?.pageSize || 20,
       };
 
+      // 📅 데이터 누락 방지를 위해 기본 검색 기간을 최근 3개월로 설정 (매뉴얼 권장)
+      if (!options?.startDt) {
+        const date = new Date();
+        date.setMonth(date.getMonth() - 3);
+        params.startDt = date.toISOString().split('T')[0];
+      } else {
+        params.startDt = options.startDt;
+      }
+      params.endDt = options?.endDt || new Date().toISOString().split('T')[0];
+
       let endpoint = "loanItemSrch";
 
-      // 🛡️ 지역 정보 처리 최적화
       if (options?.region) {
         endpoint = "loanItemSrchByLib"; 
         if (options.region.length === 5) {
-          // 안양시(11010) 같은 5자리 코드인 경우
-          params.region = options.region.substring(0, 2); // '11' (서울/경기)
-          params.dtl_region = options.region; // '11010' (안양)
+          params.region = options.region.substring(0, 2);
+          params.dtl_region = options.region;
         } else {
           params.region = options.region;
         }
@@ -233,7 +239,16 @@ export class BookRepositoryImpl implements BookRepository {
 
       console.log(`[BookRepository] Fetching from ${endpoint} with params:`, params);
       const data = await this.fetch(endpoint, params);
-      const docs = (data as any).response?.docs || [];
+      let docs = (data as any).response?.docs || [];
+
+      // 🛡️ [Fallback 로직] 세부 지역 데이터가 0건인 경우 광역 지역으로 재시도
+      if (docs.length === 0 && params.dtl_region) {
+        console.warn(`[BookRepository] No data for dtl_region ${params.dtl_region}. Falling back to region ${params.region}...`);
+        delete params.dtl_region;
+        const fallbackData = await this.fetch(endpoint, params);
+        docs = (fallbackData as any).response?.docs || [];
+      }
+
       return docs.map((book: any) => BookSchema.parse(this.mapBookData(book.doc)));
     } catch (error) {
       console.error("[BookRepository] Get popular books error:", error);
