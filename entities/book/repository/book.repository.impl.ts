@@ -12,13 +12,13 @@ import { BookRepository } from "./book.repository";
 import { libraryRepository } from "../../library/repository/library.repository.impl";
 
 export class BookRepositoryImpl implements BookRepository {
-  private readonly baseUrl = API_CONFIG.LIBRARY_API_BASE;
-  private readonly authKey = API_CONFIG.LIBRARY_API_KEY;
+  // private readonly baseUrl = API_CONFIG.LIBRARY_API_BASE; // 이제 사용 안 함
+  // private readonly authKey = API_CONFIG.LIBRARY_API_KEY; // 이제 사용 안 함
 
   private async fetch<T>(endpoint: string, params: Record<string, any> = {}): Promise<T> {
-    const url = new URL(`${this.baseUrl}/${endpoint}`);
-    url.searchParams.append("authKey", this.authKey);
-    url.searchParams.append("format", "json");
+    // ✅ 보안 프록시(/api/libraries)를 통해 호출
+    // 클라이언트 사이드에서는 상대 경로 사용 가능
+    const url = new URL(`/api/libraries/${endpoint}`, typeof window !== 'undefined' ? window.location.origin : process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000');
 
     Object.entries(params).forEach(([key, value]) => {
       if (value !== undefined && value !== null) {

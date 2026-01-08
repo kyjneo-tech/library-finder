@@ -3,13 +3,14 @@ import { Library, LibrarySearchFilters, LibraryStats, LibrarySchema } from "../m
 import { LibraryRepository } from "./library.repository";
 
 export class LibraryRepositoryImpl implements LibraryRepository {
-  private readonly baseUrl = API_CONFIG.LIBRARY_API_BASE;
-  private readonly authKey = API_CONFIG.LIBRARY_API_KEY;
+  // private readonly baseUrl = API_CONFIG.LIBRARY_API_BASE; // 이제 사용 안 함
+  // private readonly authKey = API_CONFIG.LIBRARY_API_KEY; // 이제 사용 안 함
 
   private async fetch<T>(endpoint: string, params: Record<string, any> = {}): Promise<T> {
-    const url = new URL(`${this.baseUrl}/${endpoint}`);
-    url.searchParams.append("authKey", this.authKey);
-    url.searchParams.append("format", "json");
+    // ✅ 보안 프록시(/api/libraries) 사용
+    const url = new URL(`/api/libraries/${endpoint}`, typeof window !== 'undefined' ? window.location.origin : process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000');
+    
+    // authKey 제거
 
     Object.entries(params).forEach(([key, value]) => {
       if (value !== undefined && value !== null) {
