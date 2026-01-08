@@ -79,27 +79,30 @@ const KIDS_CATEGORIES: Category[] = [
 
 export function KidsCategories({ onCategorySearch }: KidsCategoriesProps) {
   return (
-    <section className="mx-4 mt-6 mb-8">
-      <div className="flex items-center justify-between mb-3">
-        <h3 className="font-semibold text-gray-800">주제별로 찾기</h3>
-        <span className="text-xs text-gray-500">{KIDS_CATEGORIES.length}개 주제</span>
+    <section className="mx-4 mt-10 mb-12 animate-in fade-in slide-in-from-bottom-4 duration-1000">
+      <div className="flex items-center justify-between mb-5 px-1">
+        <h3 className="text-lg font-black text-gray-800 flex items-center gap-2">
+           <span className="text-xl">🌈</span>
+           주제별로 찾기
+        </h3>
+        <span className="text-[11px] font-bold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">{KIDS_CATEGORIES.length}개 주제</span>
       </div>
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-3 gap-3">
         {KIDS_CATEGORIES.map((cat) => (
           <button
             key={cat.keyword}
             onClick={() => onCategorySearch(cat.keyword, cat.kdc)}
-            className="p-3 bg-white border border-gray-200 rounded-lg hover:border-pink-300 hover:bg-pink-50 transition-all hover:shadow-sm group"
+            className="p-4 bg-white border-2 border-gray-50 rounded-[1.5rem] shadow-sm hover:border-orange-200 hover:bg-orange-50/50 transition-all hover:-translate-y-1 group"
             title={cat.description}
           >
-            <div className="text-2xl mb-1 group-hover:scale-110 transition-transform">
+            <div className="text-3xl mb-2 group-hover:scale-125 transition-transform duration-300">
               {cat.icon}
             </div>
-            <div className="text-xs font-medium text-gray-700 leading-tight">
+            <div className="text-[11px] font-black text-gray-700 leading-tight">
               {cat.label}
             </div>
             {cat.description && (
-              <div className="text-[10px] text-gray-400 mt-0.5">
+              <div className="text-[9px] text-gray-400 mt-1 font-medium">
                 {cat.description}
               </div>
             )}

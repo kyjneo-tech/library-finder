@@ -136,69 +136,73 @@ export default function HomePage() {
   }, [selectedRegion, getRegionCode, loadLibraries]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
+    <div className="min-h-screen bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-amber-50 via-white to-sky-50">
       {/* 헤더 */}
-      <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-lg border-b border-gray-100 shadow-sm">
-        <div className="max-w-2xl mx-auto px-4 py-4 space-y-4">
+      <header className="sticky top-0 z-30 bg-white/70 backdrop-blur-xl border-b border-white/50 shadow-sm">
+        <div className="max-w-2xl mx-auto px-4 py-5 space-y-4">
           {/* 타이틀 & 모드 토글 */}
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center">
-                <BookOpen className="w-6 h-6 text-white" />
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-gradient-to-br from-amber-400 to-orange-500 rounded-2xl flex items-center justify-center shadow-lg shadow-orange-200">
+                <BookOpen className="w-7 h-7 text-white" />
               </div>
               <div>
-                <h1 className="text-lg font-bold text-gray-900">우리동네 도서관</h1>
-                <p className="text-xs text-gray-500">원하는 책, 가까운 도서관에서 찾기</p>
+                <h1 className="text-xl font-extrabold text-gray-900 tracking-tight">우리 아이 <span className="text-orange-500">도서관</span></h1>
+                <p className="text-xs font-medium text-gray-500">따뜻한 이야기, 가까운 곳에서 찾아요</p>
               </div>
             </div>
 
             {/* 모드 선택 토글 */}
-            <div className="flex bg-gray-100 rounded-full p-1">
-              <button
-                onClick={() => setMode('general')}
-                className={cn(
-                  "px-4 py-1.5 rounded-full text-sm font-medium transition-all",
-                  mode === 'general'
-                    ? "bg-white text-gray-900 shadow-sm"
-                    : "text-gray-600"
-                )}
-              >
-                📚 전체
-              </button>
+            <div className="flex bg-gray-100/80 rounded-2xl p-1 border border-gray-200/50">
               <button
                 onClick={() => setMode('kids')}
                 className={cn(
-                  "px-4 py-1.5 rounded-full text-sm font-medium transition-all",
+                  "px-4 py-2 rounded-xl text-sm font-bold transition-all",
                   mode === 'kids'
-                    ? "bg-white text-gray-900 shadow-sm"
-                    : "text-gray-600"
+                    ? "bg-white text-orange-500 shadow-sm"
+                    : "text-gray-500 hover:text-gray-700"
                 )}
               >
-                👶 아이책
+                🧸 아이책
+              </button>
+              <button
+                onClick={() => setMode('general')}
+                className={cn(
+                  "px-4 py-2 rounded-xl text-sm font-bold transition-all",
+                  mode === 'general'
+                    ? "bg-white text-gray-900 shadow-sm"
+                    : "text-gray-500 hover:text-gray-700"
+                )}
+              >
+                📚 전체
               </button>
             </div>
           </div>
 
           {/* 지역 선택 */}
-          <RegionSelector />
+          <div className="bg-white/50 rounded-2xl p-1">
+            <RegionSelector />
+          </div>
 
           {/* 검색창 */}
-          <form onSubmit={handleSearch} className="relative">
+          <form onSubmit={handleSearch} className="relative group">
             <div className="relative">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <div className="absolute left-4 top-1/2 -translate-y-1/2 w-6 h-6 flex items-center justify-center">
+                <Search className="w-5 h-5 text-gray-400 group-focus-within:text-orange-400 transition-colors" />
+              </div>
               <Input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder={mounted ? config.placeholder : "어떤 책을 찾으세요?"}
-                className="pl-12 pr-20 h-12 rounded-xl border-gray-200 bg-white shadow-sm text-base"
+                className="pl-12 pr-24 h-14 rounded-2xl border-2 border-gray-100 bg-white shadow-md focus:border-orange-200 focus:ring-orange-100 text-base font-medium transition-all"
               />
               <Button
                 type="submit"
                 disabled={loading || !searchQuery.trim()}
-                className="absolute right-2 top-1/2 -translate-y-1/2 h-8 px-4 rounded-lg bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium"
+                className="absolute right-2 top-1/2 -translate-y-1/2 h-10 px-5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-sm font-bold shadow-md shadow-orange-100"
               >
-                검색
+                {loading ? "찾는 중..." : "찾기"}
               </Button>
             </div>
           </form>
@@ -211,41 +215,41 @@ export default function HomePage() {
       </header>
 
       {/* 메인 컨텐츠 */}
-      <main className="max-w-2xl mx-auto">
+      <main className="max-w-2xl mx-auto pb-20">
         {/* 선택된 책 정보 */}
         {selectedBook && (
-          <div className="mx-4 mt-4 p-5 bg-white rounded-xl border border-gray-200 shadow-sm relative transition-all">
+          <div className="mx-4 mt-6 p-6 bg-white rounded-[2rem] border-2 border-orange-50 shadow-xl shadow-orange-100/50 relative transition-all animate-in zoom-in-95 duration-300">
             {/* 닫기 버튼 */}
             <button
               onClick={clearLibraries}
-              className="absolute top-4 right-4 p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
+              className="absolute -top-2 -right-2 p-2 bg-white text-gray-400 hover:text-gray-600 shadow-lg border border-gray-100 rounded-full transition-all hover:rotate-90"
               aria-label="책 정보 닫기"
             >
               <X className="w-5 h-5" />
             </button>
 
-            <div className="flex gap-4 mb-4">
+            <div className="flex gap-6 mb-6">
               {selectedBook.bookImageURL ? (
-                <img
-                  src={selectedBook.bookImageURL}
-                  alt={selectedBook.title}
-                  className="w-20 h-28 object-cover rounded-lg shadow-md shrink-0"
-                />
+                <div className="relative group">
+                  <div className="absolute inset-0 bg-orange-200 rounded-2xl rotate-3 scale-95 opacity-50 group-hover:rotate-6 transition-transform" />
+                  <img
+                    src={selectedBook.bookImageURL}
+                    alt={selectedBook.title}
+                    className="relative w-24 h-36 object-cover rounded-2xl shadow-lg shrink-0"
+                  />
+                </div>
               ) : (
-                <div className="w-20 h-28 bg-gray-100 rounded-lg flex items-center justify-center shrink-0">
-                  <BookOpen className="w-10 h-10 text-gray-300" />
+                <div className="w-24 h-36 bg-orange-50 rounded-2xl flex items-center justify-center shrink-0 border-2 border-dashed border-orange-200">
+                  <BookOpen className="w-12 h-12 text-orange-200" />
                 </div>
               )}
-              <div className="flex-1 min-w-0 pr-8">
-                <h3 className="font-bold text-lg text-gray-900 leading-tight mb-1">{selectedBook.title}</h3>
-                <p className="text-sm text-gray-600 mb-1">{selectedBook.author}</p>
-                <div className="flex items-center gap-2 text-xs text-gray-400">
-                  <span>{selectedBook.publisher}</span>
+              <div className="flex-1 min-w-0 flex flex-col justify-center">
+                <h3 className="font-extrabold text-xl text-gray-900 leading-tight mb-2 line-clamp-2">{selectedBook.title}</h3>
+                <p className="text-sm font-bold text-orange-600 mb-2">{selectedBook.author}</p>
+                <div className="flex items-center gap-2 text-xs font-medium text-gray-400">
+                  <span className="bg-gray-100 px-2 py-0.5 rounded-md">{selectedBook.publisher}</span>
                   {selectedBook.publishYear && (
-                    <>
-                      <span className="w-px h-2 bg-gray-300" />
-                      <span>{selectedBook.publishYear}년</span>
-                    </>
+                    <span className="bg-gray-100 px-2 py-0.5 rounded-md">{selectedBook.publishYear}년</span>
                   )}
                 </div>
               </div>
@@ -253,45 +257,41 @@ export default function HomePage() {
 
             {/* 상세 설명 */}
             {selectedBook.description && (
-              <div className="mt-4 pt-4 border-t border-gray-50">
-                <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">책 소개</h4>
-                <p className="text-sm text-gray-700 leading-relaxed line-clamp-4">
+              <div className="mt-4 p-4 bg-orange-50/50 rounded-2xl">
+                <h4 className="text-[10px] font-black text-orange-400 uppercase tracking-[0.2em] mb-2 px-1">줄거리 미리보기</h4>
+                <p className="text-sm text-gray-700 leading-relaxed line-clamp-4 font-medium">
                   {selectedBook.description}
                 </p>
-              </div>
-            )}
-
-            {/* 키워드/태그 */}
-            {selectedBook.keywords && selectedBook.keywords.length > 0 && (
-              <div className="mt-4 flex flex-wrap gap-1.5">
-                {selectedBook.keywords.slice(0, 5).map((keyword, i) => (
-                  <span 
-                    key={i} 
-                    className="px-2 py-0.5 bg-blue-50 text-blue-600 text-[10px] font-medium rounded-md border border-blue-100"
-                  >
-                    #{keyword}
-                  </span>
-                ))}
               </div>
             )}
           </div>
         )}
 
         {/* 지도 영역 */}
-        <div className="mx-4 mt-4 h-[300px] rounded-xl overflow-hidden border border-gray-200 shadow-sm bg-gray-100">
+        <div className="mx-4 mt-6 h-[350px] rounded-[2rem] overflow-hidden border-4 border-white shadow-2xl bg-gray-100 relative group">
           <LibraryMap libraries={selectedBook ? librariesWithBook : undefined} />
+          {!selectedBook && (
+            <div className="absolute inset-0 pointer-events-none bg-gradient-to-t from-black/20 to-transparent flex items-end p-6">
+              <div className="bg-white/90 backdrop-blur px-4 py-2 rounded-xl flex items-center gap-2 shadow-lg">
+                <MapPin className="w-4 h-4 text-orange-500" />
+                <span className="text-xs font-bold text-gray-700">우리 동네 도서관 위치예요</span>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* 도서관 목록 */}
         {selectedBook && (
-          <div className="mx-4 mt-4 mb-6">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-base font-semibold text-gray-900 flex items-center gap-2">
-                <LibraryIcon className="w-5 h-5 text-blue-500" />
-                <span>"{selectedBook.title}" 소장 도서관</span>
+          <div className="mx-4 mt-8 mb-6">
+            <div className="flex items-center justify-between mb-4 px-2">
+              <h2 className="text-lg font-extrabold text-gray-900 flex items-center gap-2">
+                <div className="p-1.5 bg-green-100 rounded-lg">
+                  <LibraryIcon className="w-5 h-5 text-green-600" />
+                </div>
+                <span>빌릴 수 있는 곳</span>
                 {librariesWithBook.length > 0 && (
-                  <span className="text-sm font-normal text-gray-500">
-                    ({librariesWithBook.length}곳)
+                  <span className="text-green-600 bg-green-50 px-2 py-0.5 rounded-full text-xs font-bold">
+                    {librariesWithBook.length}
                   </span>
                 )}
               </h2>
@@ -299,58 +299,65 @@ export default function HomePage() {
                 variant="ghost"
                 size="sm"
                 onClick={handleDeepScan}
-                className="text-xs text-blue-600 h-8 px-2 hover:bg-blue-50"
+                className="text-xs font-bold text-blue-600 h-9 px-3 hover:bg-blue-50 rounded-xl border border-blue-100 shadow-sm"
               >
-                🕵️ 정밀 스캔
+                🔎 근처 더 찾아보기
               </Button>
             </div>
 
             {librariesLoading ? (
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {[1, 2, 3].map((i) => (
-                  <div key={i} className="h-20 bg-gray-100 rounded-xl animate-pulse" />
+                  <div key={i} className="h-24 bg-white rounded-2xl animate-pulse border border-gray-100" />
                 ))}
               </div>
             ) : librariesWithBook.length > 0 ? (
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {librariesWithBook.map((lib) => (
                   <div
                     key={lib.libCode}
-                    className="p-4 bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow"
+                    className="p-5 bg-white rounded-[1.5rem] border border-gray-100 shadow-sm hover:shadow-md transition-all hover:-translate-y-0.5"
                   >
-                    <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-start justify-between gap-4">
                       <div className="flex-1 min-w-0">
-                        <h3 className="font-medium text-gray-900">{lib.libName}</h3>
+                        <h3 className="font-bold text-gray-900 text-base mb-1">{lib.libName}</h3>
                         {lib.address && (
-                          <p className="text-sm text-gray-500 mt-1 truncate">{lib.address}</p>
+                          <div className="flex items-center gap-1 text-gray-500 mb-3">
+                            <MapPin className="w-3 h-3 shrink-0" />
+                            <p className="text-xs truncate font-medium">{lib.address}</p>
+                          </div>
                         )}
                         {lib.homepage && (
                           <a
                             href={lib.homepage}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-block mt-2 text-xs text-blue-500 border border-blue-200 px-2 py-0.5 rounded hover:bg-blue-50"
+                            className="inline-flex items-center px-3 py-1.5 bg-gray-50 text-[11px] font-bold text-gray-600 rounded-lg hover:bg-gray-100 transition-colors border border-gray-200"
                           >
-                            홈페이지 확인 &gt;
+                            도서관 홈페이지 가기
                           </a>
                         )}
                       </div>
                       <div
                         className={cn(
-                          "flex items-center gap-1 px-3 py-1.5 rounded-full text-sm font-medium shrink-0",
+                          "flex flex-col items-center gap-1 px-4 py-2 rounded-2xl text-xs font-black shrink-0 shadow-sm border",
                           lib.loanAvailable
-                            ? "bg-green-50 text-green-600"
-                            : "bg-red-50 text-red-500"
+                            ? "bg-green-50 text-green-700 border-green-100"
+                            : "bg-red-50 text-red-600 border-red-100"
                         )}
                       >
                         {lib.loanAvailable ? (
                           <>
-                            <CheckCircle2 className="w-4 h-4" />
-                            <span>대출가능</span>
+                            <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center text-white mb-1 shadow-sm">
+                                <CheckCircle2 className="w-5 h-5" />
+                            </div>
+                            <span>대출가능!</span>
                           </>
                         ) : (
                           <>
-                            <XCircle className="w-4 h-4" />
+                             <div className="w-8 h-8 bg-red-400 rounded-full flex items-center justify-center text-white mb-1 shadow-sm">
+                                <XCircle className="w-5 h-5" />
+                            </div>
                             <span>대출중</span>
                           </>
                         )}
@@ -360,12 +367,14 @@ export default function HomePage() {
                 ))}
               </div>
             ) : (
-              <div className="text-center py-8 text-gray-500 bg-white rounded-xl border border-dashed border-gray-300">
-                <LibraryIcon className="w-12 h-12 mx-auto mb-2 text-gray-300" />
-                <p>소장 도서관을 찾지 못했습니다</p>
-                <p className="text-sm mt-1 text-gray-400 mb-4">API 데이터가 누락되었을 수 있습니다.</p>
-                <Button onClick={handleDeepScan} variant="outline" className="border-blue-200 text-blue-600 hover:bg-blue-50">
-                   🔎 지역 내 모든 도서관 정밀 스캔하기
+              <div className="text-center py-12 px-6 bg-white rounded-[2rem] border-2 border-dashed border-gray-200">
+                <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <LibraryIcon className="w-8 h-8 text-gray-300" />
+                </div>
+                <p className="font-bold text-gray-600">지금은 빌릴 수 있는 곳이 없나 봐요</p>
+                <p className="text-sm mt-2 text-gray-400 mb-6 font-medium">다른 도서관을 더 꼼꼼히 찾아볼까요?</p>
+                <Button onClick={handleDeepScan} className="bg-blue-500 hover:bg-blue-600 text-white rounded-xl h-12 px-8 font-bold shadow-lg shadow-blue-100">
+                   🔎 모든 도서관 정밀 찾기
                 </Button>
               </div>
             )}
@@ -376,53 +385,53 @@ export default function HomePage() {
         {showSearchResults && books.length > 0 && (
           <>
             <div
-              className="fixed inset-0 bg-black/30 z-40"
+              className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 animate-in fade-in"
               onClick={() => setShowSearchResults(false)}
             />
-            <div className="fixed inset-x-4 top-[200px] max-h-[60vh] bg-white rounded-2xl shadow-2xl z-50 overflow-hidden">
-              <div className="sticky top-0 bg-white border-b border-gray-100 px-4 py-3 flex items-center justify-between">
-                <span className="font-semibold text-gray-900">
-                  검색 결과 ({books.length}권)
-                </span>
+            <div className="fixed inset-x-4 bottom-4 md:inset-x-auto md:left-1/2 md:-translate-x-1/2 md:w-[600px] max-h-[75vh] bg-white rounded-[2.5rem] shadow-2xl z-50 overflow-hidden flex flex-col animate-in slide-in-from-bottom-8 duration-500">
+              <div className="sticky top-0 bg-white/80 backdrop-blur-md border-b border-gray-100 px-6 py-4 flex items-center justify-between shrink-0">
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-6 bg-orange-400 rounded-full" />
+                  <span className="font-extrabold text-gray-900">
+                    이런 책을 찾았어요 ({books.length})
+                  </span>
+                </div>
                 <button
                   onClick={() => setShowSearchResults(false)}
-                  className="text-sm text-gray-500 hover:text-gray-700"
+                  className="p-2 bg-gray-50 text-gray-400 hover:text-gray-700 rounded-full transition-colors"
                 >
-                  닫기
+                  <X className="w-5 h-5" />
                 </button>
               </div>
-              <div className="overflow-y-auto max-h-[calc(60vh-52px)] p-4 space-y-3">
+              <div className="overflow-y-auto p-4 space-y-3">
                 {books.map((book) => (
                   <button
                     key={book.isbn}
                     onClick={() => handleBookSelect(book)}
-                    className="w-full p-3 bg-gray-50 rounded-xl hover:bg-blue-50 transition-colors text-left flex gap-3 group"
+                    className="w-full p-4 bg-gray-50/50 rounded-2xl hover:bg-orange-50 transition-all text-left flex gap-4 group border border-transparent hover:border-orange-100"
                   >
                     {book.bookImageURL ? (
                       <img
                         src={book.bookImageURL}
                         alt={book.title}
-                        className="w-14 h-20 object-cover rounded-lg shadow-sm group-hover:shadow-md transition-all"
+                        className="w-16 h-24 object-cover rounded-xl shadow-md group-hover:shadow-lg transition-all"
                       />
                     ) : (
-                      <div className="w-14 h-20 bg-gray-200 rounded-lg flex items-center justify-center">
-                        <BookOpen className="w-6 h-6 text-gray-400" />
+                      <div className="w-16 h-24 bg-gray-200 rounded-xl flex items-center justify-center">
+                        <BookOpen className="w-8 h-8 text-gray-400" />
                       </div>
                     )}
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-gray-900 line-clamp-1 group-hover:text-blue-600 transition-colors">{book.title}</h3>
-                      <p className="text-xs text-gray-600 mt-0.5 line-clamp-1">{book.author}</p>
-                      <div className="flex items-center gap-1.5 text-[10px] text-gray-400 mt-1">
-                        <span>{book.publisher}</span>
+                      <h3 className="font-bold text-gray-900 group-hover:text-orange-600 transition-colors line-clamp-1">{book.title}</h3>
+                      <p className="text-xs font-bold text-orange-500 mt-1 line-clamp-1">{book.author}</p>
+                      <div className="flex items-center gap-2 text-[10px] font-medium text-gray-400 mt-2">
+                        <span className="bg-white px-2 py-0.5 rounded border border-gray-100">{book.publisher}</span>
                         {book.publishYear && (
-                          <>
-                            <span className="w-0.5 h-0.5 rounded-full bg-gray-300" />
-                            <span>{book.publishYear}년</span>
-                          </>
+                          <span className="bg-white px-2 py-0.5 rounded border border-gray-100">{book.publishYear}년</span>
                         )}
                       </div>
                       {book.description && (
-                        <p className="text-[10px] text-gray-400 line-clamp-1 mt-1 font-light italic">
+                        <p className="text-[10px] text-gray-400 line-clamp-1 mt-2 font-medium italic">
                           {book.description}
                         </p>
                       )}
@@ -434,63 +443,61 @@ export default function HomePage() {
           </>
         )}
 
-        {/* 검색 결과 없음 */}
-        {showSearchResults && !loading && books.length === 0 && searchQuery && (
-          <div className="mx-4 mt-8 text-center py-12">
-            <Search className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-            <p className="text-gray-600 font-medium">검색 결과가 없습니다</p>
-            <p className="text-sm text-gray-400 mt-1">다른 키워드로 검색해 보세요</p>
-          </div>
-        )}
-
         {/* 초기 상태 */}
         {!selectedBook && !showSearchResults && (
           <>
             {mounted && mode === 'kids' ? (
-              <>
+              <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
                 {/* 아이책 모드: 추천 & 카테고리 */}
                 <KidsRecommendations onBookSelect={handleBookSelect} />
 
                 {/* 스마트 파인더 버튼 */}
-                <div className="mx-4 mt-6">
+                <div className="mx-4 mt-8">
                   <button
                     onClick={() => setShowSmartFinder(true)}
-                    className="w-full p-4 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl shadow-lg hover:shadow-xl transition-all group"
+                    className="w-full p-6 bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 text-white rounded-[2rem] shadow-xl shadow-purple-100 hover:shadow-2xl hover:scale-[1.02] active:scale-[0.98] transition-all group overflow-hidden relative"
                   >
-                    <div className="flex items-center justify-center gap-2">
-                      <span className="text-2xl">✨</span>
+                    <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-150 transition-transform duration-700">
+                        <BookOpen className="w-32 h-32 rotate-12" />
+                    </div>
+                    <div className="relative flex items-center gap-4">
+                      <div className="w-14 h-14 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center text-3xl shadow-inner">
+                        ✨
+                      </div>
                       <div className="text-left">
-                        <p className="font-bold text-base">우리 아이 맞춤 책 찾기</p>
-                        <p className="text-xs text-white/90">3가지 질문으로 딱 맞는 책 추천</p>
+                        <p className="font-black text-lg tracking-tight">우리 아이 맞춤 책 찾기</p>
+                        <p className="text-xs text-white/80 font-medium">몇 가지 질문으로 딱 맞는 책을 골라드려요</p>
                       </div>
                     </div>
                   </button>
                 </div>
 
                 {/* 우리 동네 인기 책 */}
-                <LocalPopularBooks onBookSelect={handleBookSelect} />
+                <div className="mt-4">
+                    <LocalPopularBooks onBookSelect={handleBookSelect} />
+                </div>
 
                 {/* 탭 전환 UI */}
-                <div className="mx-4 mt-6">
-                  <div className="flex bg-gray-100 rounded-xl p-1">
+                <div className="mx-4 mt-10">
+                  <div className="flex bg-gray-100/80 backdrop-blur rounded-[1.5rem] p-1.5 border border-gray-200/50 shadow-inner">
                     <button
                       onClick={() => setActiveTab('subject')}
                       className={cn(
-                        "flex-1 px-4 py-2.5 rounded-lg text-sm font-medium transition-all",
+                        "flex-1 px-4 py-3 rounded-xl text-sm font-black transition-all",
                         activeTab === 'subject'
-                          ? "bg-white text-gray-900 shadow-sm"
-                          : "text-gray-600"
+                          ? "bg-white text-gray-900 shadow-md"
+                          : "text-gray-500 hover:text-gray-700"
                       )}
                     >
-                      📚 주제별
+                      🌈 주제별
                     </button>
                     <button
                       onClick={() => setActiveTab('situation')}
                       className={cn(
-                        "flex-1 px-4 py-2.5 rounded-lg text-sm font-medium transition-all",
+                        "flex-1 px-4 py-3 rounded-xl text-sm font-black transition-all",
                         activeTab === 'situation'
-                          ? "bg-white text-gray-900 shadow-sm"
-                          : "text-gray-600"
+                          ? "bg-white text-gray-900 shadow-md"
+                          : "text-gray-500 hover:text-gray-700"
                       )}
                     >
                       💡 상황별
@@ -499,26 +506,28 @@ export default function HomePage() {
                 </div>
 
                 {/* 탭별 카테고리 표시 */}
-                {mounted && activeTab === 'subject' && (
-                  <KidsCategories onCategorySearch={handleCategorySearch} />
-                )}
-                {mounted && activeTab === 'situation' && (
-                  <SituationCategories onCategorySearch={handleCategorySearch} />
-                )}
+                <div className="min-h-[300px]">
+                    {mounted && activeTab === 'subject' && (
+                    <KidsCategories onCategorySearch={handleCategorySearch} />
+                    )}
+                    {mounted && activeTab === 'situation' && (
+                    <SituationCategories onCategorySearch={handleCategorySearch} />
+                    )}
+                </div>
 
                 {/* 이달의 트렌드 키워드 */}
                 <MonthlyTrends onKeywordSearch={handleCategorySearch} />
-              </>
+              </div>
             ) : (
               /* 일반 모드: 안내 메시지 */
-              <div className="mx-4 mt-12 text-center py-12">
-                <div className="w-20 h-20 bg-blue-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                  <Search className="w-10 h-10 text-blue-400" />
+              <div className="mx-4 mt-16 text-center py-20 bg-white/40 backdrop-blur-sm rounded-[3rem] border-2 border-dashed border-gray-200">
+                <div className="w-24 h-24 bg-blue-50 rounded-[2rem] flex items-center justify-center mx-auto mb-6 shadow-inner">
+                  <Search className="w-10 h-10 text-blue-300" />
                 </div>
-                <h2 className="text-lg font-semibold text-gray-800">책을 검색해 보세요</h2>
-                <p className="text-sm text-gray-500 mt-2">
+                <h2 className="text-xl font-extrabold text-gray-800">어떤 책을 빌려볼까요?</h2>
+                <p className="text-sm font-medium text-gray-500 mt-3 leading-relaxed">
                   원하는 책을 검색하면<br />
-                  가까운 도서관에서 빌릴 수 있는지 알려드려요
+                  가까운 도서관에 있는지 바로 확인해 드려요
                 </p>
               </div>
             )}

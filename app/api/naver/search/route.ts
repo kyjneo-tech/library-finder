@@ -14,8 +14,9 @@ export async function GET(request: Request) {
   const clientSecret = process.env.NAVER_CLIENT_SECRET;
 
   if (!clientId || !clientSecret) {
+    console.error("Missing NAVER_CLIENT_ID or NAVER_CLIENT_SECRET");
     return NextResponse.json(
-      { error: "Naver API credentials not configured" },
+      { error: "검색 서비스 설정이 완료되지 않았습니다. 관리자에게 문의하세요." },
       { status: 500 }
     );
   }
@@ -30,6 +31,7 @@ export async function GET(request: Request) {
           "X-Naver-Client-Id": clientId,
           "X-Naver-Client-Secret": clientSecret,
         },
+        next: { revalidate: 3600 } // 1시간 캐싱으로 API 호출 횟수 절약
       }
     );
 
