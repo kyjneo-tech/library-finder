@@ -73,15 +73,16 @@ export default function HomePage() {
     setShowSearchResults(true);
   };
 
-  // 카테고리/분야별 검색 (실시간 대출 실적 기반)
+  // 카테고리/분야별 검색 (실시간 지역 대출 실적 기반)
   const handleCategorySearch = async (keyword: string, kdc?: string) => {
     setSearchQuery(keyword);
     
-    const regionCode = getRegionCode(); // 현재 선택된 (세부)지역 코드
+    // 🛡️ 가장 구체적인 지역 코드 가져오기 (안양시 등)
+    const regionCode = getRegionCode(); 
 
     if (kdc) {
-      console.log(`[CategorySearch] Fetching loan ranking for KDC: ${kdc}, Region: ${regionCode}`);
-      // 네이버 검색 대신 실제 대출 통계 API 호출
+      console.log(`[CategorySearch] Fetching specific area ranking - KDC: ${kdc}, Region: ${regionCode}`);
+      // 네이버 검색 대신 실제 지역 도서관의 분야별 대출 통계 API 호출
       const data = await bookRepository.getPopularBooks({
         kdc,
         region: regionCode || undefined,
@@ -89,13 +90,13 @@ export default function HomePage() {
       });
       
       if (data && data.length > 0) {
-        setBooks(data); // 검색 결과창에 대출 순위 도서들 세팅
+        setBooks(data);
         setShowSearchResults(true);
         return;
       }
     }
     
-    // KDC 정보가 없거나 결과가 없는 경우 일반 검색 실행
+    // KDC 결과가 없거나 정보가 없는 경우 일반 검색 실행
     await searchBooks({ query: keyword });
     setShowSearchResults(true);
   };

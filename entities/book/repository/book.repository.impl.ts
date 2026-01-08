@@ -206,8 +206,6 @@ export class BookRepositoryImpl implements BookRepository {
 
   async getPopularBooks(options?: PopularBooksOptions): Promise<Book[]> {
     try {
-      console.log("[BookRepository] getPopularBooks called with options:", options);
-      
       const params: any = {
         age: options?.age,
         gender: options?.gender,
@@ -219,21 +217,22 @@ export class BookRepositoryImpl implements BookRepository {
         pageSize: options?.pageSize || 20,
       };
 
-      let endpoint = "loanItemSrch"; // 기본: 전국 인기 도서
+      let endpoint = "loanItemSrch";
 
+      // 🛡️ 지역 정보 처리 최적화
       if (options?.region) {
-        endpoint = "loanItemSrchByLib"; // 지역 선택 시: 지역별 인기 도서 (대여 확률 훨씬 높음)
+        endpoint = "loanItemSrchByLib"; 
         if (options.region.length === 5) {
-          params.region = options.region.substring(0, 2);
-          params.dtl_region = options.region;
+          // 안양시(11010) 같은 5자리 코드인 경우
+          params.region = options.region.substring(0, 2); // '11' (서울/경기)
+          params.dtl_region = options.region; // '11010' (안양)
         } else {
           params.region = options.region;
         }
       }
 
+      console.log(`[BookRepository] Fetching from ${endpoint} with params:`, params);
       const data = await this.fetch(endpoint, params);
-
-      console.log(`[BookRepository] ${endpoint} response:`, data);
       const docs = (data as any).response?.docs || [];
       return docs.map((book: any) => BookSchema.parse(this.mapBookData(book.doc)));
     } catch (error) {

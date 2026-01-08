@@ -17,17 +17,17 @@ export function LocalPopularBooks({ onBookSelect }: LocalPopularBooksProps) {
   const [isFallback, setIsFallback] = useState(false);
 
   const { getRegionCode, getDisplayName } = useRegionStore();
-  const { fetchLocalPopularBooks } = useRecommendationsStore(); // ✅ Store hook
+  const { fetchFamilyPopularBooks } = useRecommendationsStore(); // ✅ 리팩토링된 메서드 사용
 
   const fetchLocalPopular = async () => {
     setLoading(true);
-    // setIsFallback(false); // Store 결과에 따라 설정
     try {
       const regionCode = getRegionCode();
-      const result = await fetchLocalPopularBooks(regionCode || "");
+      // fetchFamilyPopularBooks를 호출하되, 내부 로직이 regionCode 기반으로 작동함
+      const result = await fetchFamilyPopularBooks(regionCode || undefined);
       
-      setBooks(result.books.slice(0, 10));
-      setIsFallback(result.isFallback);
+      setBooks(result.slice(0, 10));
+      // isFallback 로직은 현재 store에서 명시적으로 제공하지 않으므로 제거하거나 추후 보강
     } catch (error) {
       console.error("[LocalPopularBooks] Failed to fetch:", error);
       setBooks([]);
