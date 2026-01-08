@@ -31,7 +31,7 @@ export async function GET(request: Request) {
           "X-Naver-Client-Id": clientId,
           "X-Naver-Client-Secret": clientSecret,
         },
-        next: { revalidate: 3600 } // 1시간 캐싱으로 API 호출 횟수 절약
+        next: { revalidate: 86400 } // 🛡️ 24시간 캐싱 (할당량 절약 핵심)
       }
     );
 

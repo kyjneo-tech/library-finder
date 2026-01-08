@@ -185,43 +185,36 @@ export const useBookSearch = create<BookSearchState>((set, get) => ({
       const result = await bookRepository.getLibrariesWithBook(isbn, region);
       console.log(`[useBookSearch] Found ${result.libraries.length} libraries holding the book.`);
 
-      // 각 도서관의 대출 가능 여부 조회 (bookExist API) - 병렬 처리
+      // 🛡️ [API 절약] 모든 도서관을 다 확인하지 않고 상위 3곳만 우선 확인
+      const checkLimit = 3;
       const librariesWithInfo = await Promise.all(
-        result.libraries.map(async (lib) => {
-          try {
-            const availability = await bookRepository.getBookAvailability(isbn, lib.libraryCode);
-            const info = availability[0];
-            
-            // 디버깅 로그
-            if (info) {
-               console.log(`[Availability] Lib: ${lib.libraryName}, Has: ${info.hasBook}, Loanable: ${info.loanAvailable}`);
-            }
-
-            return {
-              libCode: lib.libraryCode,
-              libName: lib.libraryName,
-              address: "",
-              tel: "",
-              latitude: lib.latitude ? parseFloat(lib.latitude) : 0,
-              longitude: lib.longitude ? parseFloat(lib.longitude) : 0,
-              homepage: lib.homepage,
-              hasBook: info?.hasBook ?? true,
-              loanAvailable: info?.loanAvailable ?? false,
-            };
-          } catch (error) {
-            console.error(`[Availability] Failed for lib ${lib.libraryName}:`, error);
-            // 개별 도서관 조회 실패 시 기본값으로 추가 (보수적으로 대출불가 처리)
-            return {
-              libCode: lib.libraryCode,
-              libName: lib.libraryName,
-              address: "",
-              tel: "",
-              latitude: lib.latitude ? parseFloat(lib.latitude) : 0,
-              longitude: lib.longitude ? parseFloat(lib.longitude) : 0,
-              hasBook: true,
-              loanAvailable: false,
-            };
+        result.libraries.map(async (lib, idx) => {
+          // 3위까지만 자동 조회, 그 외에는 일단 대출불가(또는 확인필요) 상태로 표시
+          if (idx < checkLimit) {
+            try {
+              const availability = await bookRepository.getBookAvailability(isbn, lib.libraryCode);
+              const info = availability[0];
+              return {
+                ...lib,
+                libCode: lib.libraryCode,
+                libName: lib.libraryName,
+                latitude: lib.latitude ? parseFloat(lib.latitude) : 0,
+                longitude: lib.longitude ? parseFloat(lib.longitude) : 0,
+                hasBook: info?.hasBook ?? true,
+                loanAvailable: info?.loanAvailable ?? false,
+              };
+            } catch (e) { /* 에러 처리 */ }
           }
+          
+          return {
+            ...lib,
+            libCode: lib.libraryCode,
+            libName: lib.libraryName,
+            latitude: lib.latitude ? parseFloat(lib.latitude) : 0,
+            longitude: lib.longitude ? parseFloat(lib.longitude) : 0,
+            hasBook: true,
+            loanAvailable: false, // 4위부터는 '확인 필요' 상태
+          };
         })
       );
 

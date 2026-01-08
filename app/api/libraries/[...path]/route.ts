@@ -47,11 +47,10 @@ export async function GET(
 
     const data = await response.json();
     
-    // ✅ 응답 반환 및 브라우저 캐싱 설정 (1시간)
-    // API 쿼터를 아끼기 위해 서버 응답도 캐싱합니다.
+    // ✅ [API 다이어트] 캐시 시간을 24시간으로 대폭 연장 (API 쿼터 절약 핵심)
     return NextResponse.json(data, {
       headers: {
-        "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=59",
+        "Cache-Control": "public, s-maxage=86400, stale-while-revalidate=3600",
       },
     });
   } catch (error) {

@@ -22,6 +22,7 @@ export async function GET(request: Request) {
           "X-Naver-Client-Id": clientId!,
           "X-Naver-Client-Secret": clientSecret!,
         },
+        next: { revalidate: 86400 } // 🛡️ 24시간 캐싱
       }
     );
 
