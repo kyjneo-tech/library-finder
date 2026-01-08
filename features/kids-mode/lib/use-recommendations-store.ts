@@ -4,22 +4,16 @@ import { Book } from "@/entities/book/model/types";
 import { bookRepository } from "@/entities/book/repository/book.repository.impl";
 
 interface RecommendationsState {
-  // 연령별 인기 도서 캐시 (키: 연령대 문자열, 값: 도서 목록)
   ageRecommendations: Record<string, Book[]>;
   ageRecommendationsTimestamp: Record<string, number>;
-
-  // 지역별 인기 도서 캐시 (패밀리용)
   familyPopularBooks: Record<string, Book[]>;
   familyPopularBooksTimestamp: Record<string, number>;
-
-  // 지역별 인기 도서 캐시 (키즈용) - 새로 추가
   localKidsPopularBooks: Record<string, Book[]>;
   localKidsPopularBooksTimestamp: Record<string, number>;
 
-  // Actions
   fetchAgeRecommendations: (age: string) => Promise<Book[]>;
   fetchFamilyPopularBooks: (regionCode?: string) => Promise<Book[]>;
-  fetchLocalKidsPopularBooks: (regionCode?: string) => Promise<Book[]>; // 새로 추가
+  fetchLocalKidsPopularBooks: (regionCode?: string) => Promise<Book[]>;
 }
 
 const CACHE_DURATION = 6 * 60 * 60 * 1000;
@@ -42,29 +36,40 @@ export const useRecommendationsStore = create<RecommendationsState>()(
           return ageRecommendations[age];
         }
 
-        let ageParam: string | undefined;
-        if (age !== 'all') {
-            switch (age) {
-            case '0-2': ageParam = '0'; break;
-            case '3-5': ageParam = '0'; break;
-            case '6-7': ageParam = '6'; break;
-            case '8-10': ageParam = 'a8'; break; 
-            }
-        } else {
-            ageParam = "0;6;8";
-        }
-
         try {
-            const books = await bookRepository.getPopularBooks({
-                age: ageParam,
-                addCode: '7',
-                pageSize: 12,
-            });
+            let finalBooks: Book[] = [];
+            
+            // 🎨 [차별화 전략] API의 한계를 키워드 검색(srchBooks + loan sort)으로 극복
+            if (age === '0-2') {
+                // 0~2세는 진짜 영아용 키워드로 검색 (대출순 정렬)
+                const result = await bookRepository.searchBooks({
+                    query: "보드북 촉각책 초점책 그림책",
+                    pageSize: 12
+                });
+                finalBooks = result.books;
+            } else if (age === '3-5') {
+                // 3~5세는 유아기 사회성/창작 키워드로 검색
+                const result = await bookRepository.searchBooks({
+                    query: "창작동화 인성동화 생활습관",
+                    pageSize: 12
+                });
+                finalBooks = result.books;
+            } else {
+                // 6세 이상은 기존의 정밀한 loanItemSrch API 사용
+                let ageParam = age === '6-7' ? '6' : 'a8';
+                finalBooks = await bookRepository.getPopularBooks({
+                    age: ageParam,
+                    addCode: '7',
+                    pageSize: 12,
+                });
+            }
+
             set((state) => ({
-                ageRecommendations: { ...state.ageRecommendations, [age]: books },
+                ageRecommendations: { ...state.ageRecommendations, [age]: finalBooks },
                 ageRecommendationsTimestamp: { ...state.ageRecommendationsTimestamp, [age]: now }
             }));
-            return books;
+
+            return finalBooks;
         } catch (error) { return []; }
       },
 
@@ -101,7 +106,6 @@ export const useRecommendationsStore = create<RecommendationsState>()(
         }
 
         try {
-            // 🛡️ 키즈용 지역 인기 도서 - addCode: 7 (아동 전용) 강력 적용
             const books = await bookRepository.getPopularBooks({
                 region: regionCode || undefined,
                 age: "0;6;8", 
@@ -117,7 +121,7 @@ export const useRecommendationsStore = create<RecommendationsState>()(
       },
     }),
     {
-      name: "library-recommendations-storage-v4",
+      name: "library-recommendations-storage-v5", // 캐시 강제 무효화
     }
   )
 );
