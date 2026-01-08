@@ -18,6 +18,7 @@ import { useCategoryTab } from "@/features/kids-mode/lib/use-category-tab";
 import { LibraryMap } from "@/features/library-map/ui/LibraryMap";
 import { FamilyCategories } from "@/features/recommendations/ui/family-categories";
 import { FamilyPopularBooks } from "@/features/recommendations/ui/family-popular-books";
+import { bookRepository } from "@/entities/book/repository/book.repository.impl";
 import { Input } from "@/shared/ui/input";
 import { Button } from "@/shared/ui/button";
 import { cn } from "@/shared/lib/cn";
@@ -90,9 +91,22 @@ export default function HomePage() {
     setShowSearchResults(true);
   };
 
+  const [reviews, setReviews] = useState<any[]>([]);
+  const [usageData, setUsageData] = useState<any>(null);
+
+  // 책 선택 시 상세 정보 추가 로드
   const handleBookSelect = async (book: Book) => {
     selectBook(book);
     setShowSearchResults(false);
+    
+    // 블로그 리뷰 및 이용 분석 데이터 로드
+    const [reviewData, analysisData] = await Promise.all([
+      bookRepository.getBlogReviews(book.title),
+      bookRepository.getUsageAnalysis(book.isbn13 || book.isbn)
+    ]);
+    setReviews(reviewData);
+    setUsageData(analysisData);
+
     const regionCode = getRegionCode();
     if (!regionCode) {
       alert("먼저 검색할 지역을 선택해주세요!");
@@ -239,6 +253,43 @@ export default function HomePage() {
                 <p className="text-[15px] text-gray-800 leading-[1.8] font-medium tracking-tight">
                     {selectedBook.description}
                 </p>
+              </div>
+            )}
+
+            {/* 독자 분석 통계 */}
+            {usageData?.loanGrps && usageData.loanGrps.length > 0 && (
+              <div className="mt-6">
+                <h4 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-3 px-1">이 책, 누가 좋아할까요?</h4>
+                <div className="flex flex-wrap gap-2">
+                  {usageData.loanGrps.slice(0, 3).map((grp: any, i: number) => (
+                    <div key={i} className="bg-white border border-gray-100 px-4 py-2 rounded-xl shadow-sm">
+                      <p className="text-[10px] text-gray-400 font-bold">{grp.gender === '0' ? '남성' : '여성'} {grp.age}대</p>
+                      <p className="text-sm font-black text-gray-700">인기 {grp.ranking}위</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* 리얼 블로그 리뷰 */}
+            {reviews.length > 0 && (
+              <div className="mt-8">
+                <h4 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-4 px-1">먼저 읽어본 사람들의 이야기</h4>
+                <div className="space-y-3">
+                  {reviews.map((rev, i) => (
+                    <a 
+                      key={i} 
+                      href={rev.link} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="block p-4 bg-white border border-gray-100 rounded-2xl hover:border-purple-200 transition-all shadow-sm group"
+                    >
+                      <h5 className="text-sm font-bold text-gray-800 mb-1 line-clamp-1 group-hover:text-purple-600 transition-colors" dangerouslySetInnerHTML={{ __html: rev.title }} />
+                      <p className="text-xs text-gray-500 line-clamp-2 leading-relaxed" dangerouslySetInnerHTML={{ __html: rev.description }} />
+                      <div className="mt-2 text-[10px] text-purple-400 font-bold">블로그 리뷰 보기 &gt;</div>
+                    </a>
+                  ))}
+                </div>
               </div>
             )}
           </div>

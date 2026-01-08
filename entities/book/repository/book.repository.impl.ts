@@ -322,16 +322,24 @@ export class BookRepositoryImpl implements BookRepository {
     }
   }
 
-  async getLibraryUsageTrend(libCode: string, type: "D" | "H"): Promise<any> {
+  async getUsageAnalysis(isbn: string): Promise<any> {
     try {
-      const data = await this.fetch("usageTrend", {
-        libCode,
-        type,
-      });
+      const data = await this.fetch("usageAnalysisList", { isbn13: isbn });
       return (data as any).response || null;
     } catch (error) {
-      console.error("Get library usage trend error:", error);
+      console.error("Get usage analysis error:", error);
       return null;
+    }
+  }
+
+  async getBlogReviews(title: string): Promise<any[]> {
+    try {
+      const response = await fetch(`/api/naver/blog?query=${encodeURIComponent(title)}&display=3`);
+      if (!response.ok) return [];
+      const data = await response.json();
+      return data.items || [];
+    } catch (error) {
+      return [];
     }
   }
 
