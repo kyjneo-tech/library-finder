@@ -145,21 +145,21 @@ export const useBookSearch = create<BookSearchState>((set, get) => ({
       console.log(`[useBookSearch] Fetching details for ${book.title}...`);
       try {
         // 상세 정보(srchDtlList) 조회
-        // 참고: Repository의 getBookDetail이 srchDtlList를 호출함
         const detailedBook = await bookRepository.getBookDetail(book.isbn13);
         
         if (detailedBook) {
           console.log("[useBookSearch] Details fetched successfully");
           set((state) => {
+             const currentBook = state.selectedBook;
              // 선택된 책이 바뀌지 않았을 때만 업데이트
-             if (state.selectedBook?.isbn13 === book.isbn13) {
+             if (currentBook && currentBook.isbn13 === book.isbn13) {
                  return {
                      selectedBook: {
-                         ...state.selectedBook,
+                         ...currentBook,
                          description: detailedBook.description,
                          keywords: detailedBook.keywords,
-                         publisher: detailedBook.publisher || state.selectedBook.publisher,
-                         publishYear: detailedBook.publishYear || state.selectedBook.publishYear,
+                         publisher: detailedBook.publisher || currentBook.publisher,
+                         publishYear: detailedBook.publishYear || currentBook.publishYear,
                      }
                  };
              }
