@@ -33,7 +33,9 @@ export const useRecommendations = create<RecommendationsState>((set) => ({
       const books = await bookRepository.getPopularBooks({ pageSize: 10 });
       set({ popularBooks: books, loading: false });
     } catch (error) {
+      console.error("Failed to load popular books:", error);
       set({
+        popularBooks: [],
         error: error instanceof Error ? error.message : "인기 도서 로딩 실패",
         loading: false,
       });
@@ -46,7 +48,9 @@ export const useRecommendations = create<RecommendationsState>((set) => ({
       const books = await bookRepository.getTrendingBooks({ pageSize: 10 });
       set({ trendingBooks: books, loading: false });
     } catch (error) {
+      console.error("Failed to load trending books:", error);
       set({
+        trendingBooks: [],
         error: error instanceof Error ? error.message : "트렌딩 도서 로딩 실패",
         loading: false,
       });
@@ -59,7 +63,9 @@ export const useRecommendations = create<RecommendationsState>((set) => ({
       const books = await bookRepository.getNewArrivals({ pageSize: 10 });
       set({ newArrivals: books, loading: false });
     } catch (error) {
+      console.error("Failed to load new arrivals:", error);
       set({
+        newArrivals: [],
         error: error instanceof Error ? error.message : "신간 도서 로딩 실패",
         loading: false,
       });

@@ -13,6 +13,8 @@ export const metadata: Metadata = {
   },
 };
 
+import Script from "next/script";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -20,16 +22,13 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ko">
-      <head>
-        <script
-          type="text/javascript"
-          src={`//dapi.kakao.com/v2/maps/sdk.js?appkey=${process.env.NEXT_PUBLIC_KAKAO_MAP_KEY}&autoload=false`}
-          async
-        />
-      </head>
       <body className="antialiased">
         {children}
         <Toaster position="top-center" />
+        <Script
+          src={`//dapi.kakao.com/v2/maps/sdk.js?appkey=${process.env.NEXT_PUBLIC_KAKAO_MAP_KEY}&autoload=false`}
+          strategy="beforeInteractive"
+        />
       </body>
     </html>
   );

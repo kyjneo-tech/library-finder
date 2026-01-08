@@ -30,7 +30,7 @@ export interface BookRepository {
   /**
    * 도서 소장 도서관 조회 (API #13)
    */
-  getLibrariesWithBook(isbn: string): Promise<{
+  getLibrariesWithBook(isbn: string, regionCode?: string): Promise<{
     libraries: BookAvailability[];
     totalCount: number;
   }>;
@@ -64,4 +64,12 @@ export interface BookRepository {
    * 이달의 키워드 (API #17)
    */
   getMonthlyKeywords(): Promise<string[]>;
+
+  /**
+   * [Deep Scan] 지역 내 모든 도서관 전수 조사
+   */
+  deepScanLibraries(isbn: string, regionCode: string): Promise<{
+    libraries: BookAvailability[];
+    totalCount: number;
+  }>;
 }

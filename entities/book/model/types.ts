@@ -31,6 +31,11 @@ export const BookAvailabilitySchema = z.object({
   hasBook: z.boolean(), // 소장 여부
   loanAvailable: z.boolean(), // 대출 가능 여부
   returnDate: z.string().optional(), // 반납 예정일
+  latitude: z.string().optional(), // 위도 (API 응답이 string일 가능성 높음. number로 변환 필요 시 확인)
+  longitude: z.string().optional(), // 경도
+  homepage: z.string().optional(), // 홈페이지 URL (교차 검증용)
+  address: z.string().optional(), // 주소
+  tel: z.string().optional(), // 전화번호
 });
 
 export type BookAvailability = z.infer<typeof BookAvailabilitySchema>;

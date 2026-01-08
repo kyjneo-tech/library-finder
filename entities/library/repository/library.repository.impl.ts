@@ -19,7 +19,17 @@ export class LibraryRepositoryImpl implements LibraryRepository {
 
     const response = await fetch(url.toString());
     if (!response.ok) {
-      throw new Error(`API Error: ${response.statusText}`);
+      const errorText = await response.text();
+      console.error("API Error Details:", {
+        endpoint,
+        status: response.status,
+        statusText: response.statusText,
+        url: url.toString(),
+        errorBody: errorText,
+      });
+      throw new Error(
+        `API Error [${response.status}]: ${response.statusText}. Endpoint: ${endpoint}`
+      );
     }
 
     return response.json();
