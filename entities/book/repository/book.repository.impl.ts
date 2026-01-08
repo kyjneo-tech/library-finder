@@ -46,42 +46,61 @@ export class BookRepositoryImpl implements BookRepository {
 
   async searchBooks(filters: BookSearchFilters): Promise<{ books: Book[]; totalCount: number }> {
     try {
-      console.log("[BookRepository] Searching via Naver API:", filters);
+      console.log("[BookRepository] Searching via Library Data API:", filters);
       
       const query = filters.query || "";
       const pageNo = filters.pageNo || 1;
       const pageSize = filters.pageSize || 10;
 
-      const response = await fetch(`/api/naver/search?query=${encodeURIComponent(query)}&start=${pageNo}&display=${pageSize}`);
+      // 도서관 실적 데이터 기반 검색 (실제로 도서관에 존재하는 책들만 검색됨)
+      const data = await this.fetch("srchBooks", {
+        keyword: query,
+        pageNo,
+        pageSize,
+        sort: "loan", // 대출순 정렬로 대여 가능 확률 높은 도서 우선 노출
+        order: "desc"
+      });
       
-      if (!response.ok) {
-        throw new Error(`Naver API error: ${response.status}`);
+      const docs = (data as any).response?.docs || [];
+      const totalCount = Number((data as any).response?.numFound) || 0;
+
+      if (docs.length === 0) {
+        console.log("[BookRepository] No library results, falling back to Naver Search...");
+        // 만약 도서관 데이터에 없으면 최후의 수단으로 네이버 검색 사용
+        return this.searchViaNaver(query, pageNo, pageSize);
       }
 
-      const data = await response.json();
-      const items = data.items || [];
-      const totalCount = data.total || 0;
-
-      // 네이버 API 응답 매핑
-      const books = items.map((item: any) => ({
-        isbn: item.isbn.split(" ")[1] || item.isbn.split(" ")[0], // 10/13자리 공백 구분됨
-        isbn13: item.isbn.split(" ")[1] || item.isbn, // 뒷부분이 13자리일 확률 높음
-        title: item.title.replace(/<[^>]*>?/gm, ""), // 태그 제거
-        author: item.author.replace(/<[^>]*>?/gm, ""),
-        publisher: item.publisher.replace(/<[^>]*>?/gm, ""),
-        publishYear: item.pubdate?.substring(0, 4) || "",
-        bookImageURL: item.image,
-        description: item.description?.replace(/<[^>]*>?/gm, ""),
-      }));
+      const books = docs.map((item: any) => BookSchema.parse(this.mapBookData(item.doc)));
 
       return {
-        books: books.map((book: any) => BookSchema.parse(book)),
+        books,
         totalCount,
       };
     } catch (error) {
       console.error("Search books error:", error);
       return { books: [], totalCount: 0 };
     }
+  }
+
+  // 최후의 수단: 네이버 검색 로직 분리
+  private async searchViaNaver(query: string, pageNo: number, pageSize: number) {
+    const response = await fetch(`/api/naver/search?query=${encodeURIComponent(query)}&start=${pageNo}&display=${pageSize}`);
+    if (!response.ok) return { books: [], totalCount: 0 };
+    
+    const data = await response.json();
+    const items = data.items || [];
+    const books = items.map((item: any) => BookSchema.parse({
+        isbn: item.isbn.split(" ")[1] || item.isbn.split(" ")[0],
+        isbn13: item.isbn.split(" ")[1] || item.isbn,
+        title: item.title.replace(/<[^>]*>?/gm, ""),
+        author: item.author.replace(/<[^>]*>?/gm, ""),
+        publisher: item.publisher.replace(/<[^>]*>?/gm, ""),
+        publishYear: item.pubdate?.substring(0, 4) || "",
+        bookImageURL: item.image,
+        description: item.description?.replace(/<[^>]*>?/gm, ""),
+    }));
+
+    return { books, totalCount: data.total || 0 };
   }
 
   async getBookDetail(isbn: string): Promise<Book | null> {
@@ -300,6 +319,19 @@ export class BookRepositoryImpl implements BookRepository {
     } catch (error) {
       console.error("Get monthly keywords error:", error);
       return [];
+    }
+  }
+
+  async getLibraryUsageTrend(libCode: string, type: "D" | "H"): Promise<any> {
+    try {
+      const data = await this.fetch("usageTrend", {
+        libCode,
+        type,
+      });
+      return (data as any).response || null;
+    } catch (error) {
+      console.error("Get library usage trend error:", error);
+      return null;
     }
   }
 

@@ -33,6 +33,15 @@ export default function HomePage() {
   const config = getSearchConfig();
   const { activeTab, setActiveTab } = useCategoryTab();
 
+  // 탭(모드) 전환 시 검색 상태 초기화
+  useEffect(() => {
+    if (mounted) {
+      setSearchQuery("");
+      setShowSearchResults(false);
+      clearLibraries(); // 선택된 책 및 도서관 목록 초기화
+    }
+  }, [mode, mounted]);
+
   // Hydration 에러 방지
   useEffect(() => {
     setMounted(true);
@@ -252,7 +261,14 @@ export default function HomePage() {
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1 min-w-0">
                         <h3 className="font-bold text-gray-900 text-base mb-1">{lib.libName}</h3>
-                        {lib.address && <div className="flex items-center gap-1 text-gray-500 mb-3"><MapPin className="w-3 h-3 shrink-0" /><p className="text-xs truncate font-medium">{lib.address}</p></div>}
+                        {lib.address && <div className="flex items-center gap-1 text-gray-500 mb-2"><MapPin className="w-3 h-3 shrink-0" /><p className="text-xs truncate font-medium">{lib.address}</p></div>}
+                        
+                        {/* 가족 방문 가이드 (매뉴얼 기반 편의 정보) */}
+                        <div className="flex flex-wrap gap-2 mb-3">
+                           <span className="text-[10px] bg-purple-50 text-purple-600 px-2 py-0.5 rounded-md font-black">평일 오전 방문 권장 ✨</span>
+                           <span className="text-[10px] bg-blue-50 text-blue-600 px-2 py-0.5 rounded-md font-black">유아 자료실 보유</span>
+                        </div>
+
                         {lib.homepage && <a href={lib.homepage} target="_blank" rel="noopener noreferrer" className="inline-flex items-center px-3 py-1.5 bg-gray-50 text-[11px] font-bold text-gray-600 rounded-lg border border-gray-200">도서관 홈페이지 가기</a>}
                       </div>
                       <div className={cn("flex flex-col items-center gap-1 px-4 py-2 rounded-2xl text-xs font-black shrink-0 border", lib.loanAvailable ? "bg-green-50 text-green-700 border-green-100" : "bg-red-50 text-red-600 border-red-100")}>
