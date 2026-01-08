@@ -12,12 +12,8 @@ import { BookRepository } from "./book.repository";
 import { libraryRepository } from "../../library/repository/library.repository.impl";
 
 export class BookRepositoryImpl implements BookRepository {
-  // private readonly baseUrl = API_CONFIG.LIBRARY_API_BASE; // 이제 사용 안 함
-  // private readonly authKey = API_CONFIG.LIBRARY_API_KEY; // 이제 사용 안 함
 
   private async fetch<T>(endpoint: string, params: Record<string, any> = {}): Promise<T> {
-    // ✅ 보안 프록시(/api/libraries)를 통해 호출
-    // 클라이언트 사이드에서는 상대 경로 사용 가능
     const url = new URL(`/api/libraries/${endpoint}`, typeof window !== 'undefined' ? window.location.origin : process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000');
 
     Object.entries(params).forEach(([key, value]) => {
@@ -28,17 +24,7 @@ export class BookRepositoryImpl implements BookRepository {
 
     const response = await fetch(url.toString());
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error("API Error Details:", {
-        endpoint,
-        status: response.status,
-        statusText: response.statusText,
-        url: url.toString(),
-        errorBody: errorText,
-      });
-      throw new Error(
-        `API Error [${response.status}]: ${response.statusText}. Endpoint: ${endpoint}`
-      );
+      throw new Error(`API Error [${response.status}]: ${response.statusText}`);
     }
 
     return response.json();
@@ -46,18 +32,15 @@ export class BookRepositoryImpl implements BookRepository {
 
   async searchBooks(filters: BookSearchFilters): Promise<{ books: Book[]; totalCount: number }> {
     try {
-      console.log("[BookRepository] Searching via Library Data API:", filters);
-      
       const query = filters.query || "";
       const pageNo = filters.pageNo || 1;
       const pageSize = filters.pageSize || 10;
 
-      // 도서관 실적 데이터 기반 검색 (실제로 도서관에 존재하는 책들만 검색됨)
       const data = await this.fetch("srchBooks", {
         keyword: query,
         pageNo,
         pageSize,
-        sort: "loan", // 대출순 정렬로 대여 가능 확률 높은 도서 우선 노출
+        sort: "loan",
         order: "desc"
       });
       
@@ -65,24 +48,18 @@ export class BookRepositoryImpl implements BookRepository {
       const totalCount = Number((data as any).response?.numFound) || 0;
 
       if (docs.length === 0) {
-        console.log("[BookRepository] No library results, falling back to Naver Search...");
-        // 만약 도서관 데이터에 없으면 최후의 수단으로 네이버 검색 사용
         return this.searchViaNaver(query, pageNo, pageSize);
       }
 
       const books = docs.map((item: any) => BookSchema.parse(this.mapBookData(item.doc)));
 
-      return {
-        books,
-        totalCount,
-      };
+      return { books, totalCount };
     } catch (error) {
       console.error("Search books error:", error);
       return { books: [], totalCount: 0 };
     }
   }
 
-  // 최후의 수단: 네이버 검색 로직 분리
   private async searchViaNaver(query: string, pageNo: number, pageSize: number) {
     const response = await fetch(`/api/naver/search?query=${encodeURIComponent(query)}&start=${pageNo}&display=${pageSize}`);
     if (!response.ok) return { books: [], totalCount: 0 };
@@ -107,12 +84,9 @@ export class BookRepositoryImpl implements BookRepository {
     try {
       const data = await this.fetch("srchDtlList", { isbn13: isbn, loaninfoYN: "Y" });
       const bookDetail = (data as any).response?.detail?.[0]?.book;
-
       if (!bookDetail) return null;
-
       return BookSchema.parse(this.mapBookData(bookDetail));
     } catch (error) {
-      console.error("Get book detail error:", error);
       return null;
     }
   }
@@ -120,28 +94,20 @@ export class BookRepositoryImpl implements BookRepository {
   async getBookAvailability(isbn: string, libCode?: string): Promise<BookAvailability[]> {
     try {
       if (!libCode) return [];
-
-      const data = await this.fetch("bookExist", {
-        isbn13: isbn,
-        libCode,
-      });
-
+      const data = await this.fetch("bookExist", { isbn13: isbn, libCode });
       const result = (data as any).response?.result;
-
       if (!result) return [];
 
       return [
         BookAvailabilitySchema.parse({
           isbn,
           libraryCode: libCode,
-          libraryName: "Unknown Library", // bookExist 응답에는 도서관 이름이 없음 (API 한계). 필요 시 별도 조회 필요하나 여기선 생략.
+          libraryName: "Unknown Library",
           hasBook: result.hasBook === "Y",
           loanAvailable: result.loanAvailable === "Y",
-          returnDate: undefined, // bookExist에는 반납 예정일 없음
         }),
       ];
     } catch (error) {
-      console.error("Get book availability error:", error);
       return [];
     }
   }
@@ -155,31 +121,11 @@ export class BookRepositoryImpl implements BookRepository {
 
       if (regionCode) {
         params.region = regionCode.substring(0, 2);
-        
-        // 🛡️ [지능형 구 코드 자동 맵핑] 소장 도서관 검색에도 적용
-        if (regionCode.length === 5 && regionCode.endsWith('0')) {
-            const cityMapping: Record<string, string[]> = {
-                "31010": ["31011", "31012", "31013", "31014"], // 수원
-                "31020": ["31021", "31022", "31023"],         // 성남
-                "31040": ["31041", "31042"],                 // 안양
-                "31090": ["31091", "31092"],                 // 안산
-                "31100": ["31101", "31103", "31104"],         // 고양
-                "31190": ["31191", "31192", "31193"],         // 용인
-                // ... 필요 시 추가
-            };
-            if (cityMapping[regionCode]) {
-                params.dtl_region = cityMapping[regionCode].join(';');
-            } else {
-                params.dtl_region = regionCode;
-            }
-        } else {
-            params.dtl_region = regionCode;
-        }
+        params.dtl_region = regionCode; // 🛡️ UI에서 보낸 정확한 구 코드를 사용
       } else {
         params.region = "11";
       }
 
-      console.log(`[BookRepository] Fetching libraries with mapped params:`, params);
       const data = await this.fetch("libSrchByBook", params);
       const libraries = (data as any).response?.libs || [];
 
@@ -192,7 +138,6 @@ export class BookRepositoryImpl implements BookRepository {
             libraryName: lib.libName,
             hasBook: true,
             loanAvailable: false,
-            returnDate: undefined,
             latitude: lib.latitude,
             longitude: lib.longitude,
             homepage: lib.homepage || undefined,
@@ -201,7 +146,6 @@ export class BookRepositoryImpl implements BookRepository {
         totalCount: libraries.length,
       };
     } catch (error) {
-      console.error("Get libraries with book error:", error);
       return { libraries: [], totalCount: 0 };
     }
   }
@@ -218,7 +162,7 @@ export class BookRepositoryImpl implements BookRepository {
       };
 
       const date = new Date();
-      date.setMonth(date.getMonth() - 6);
+      date.setMonth(date.getMonth() - 6); // 📅 기간 6개월 확장
       params.startDt = date.toISOString().split('T')[0];
       params.endDt = new Date().toISOString().split('T')[0];
 
@@ -226,122 +170,16 @@ export class BookRepositoryImpl implements BookRepository {
 
       if (options?.region) {
         endpoint = "loanItemSrchByLib"; 
-        const region = options.region.substring(0, 2);
-        params.region = region;
-
-        if (options.region.length === 5) {
-          // 🛡️ [지능형 구 코드 자동 맵핑]
-          // API가 '시 전체 코드(예: 31010)'에는 데이터를 주지 않으므로, 
-          // 하위 구 코드들(31011, 31012...)을 자동으로 찾아내어 통합 요청합니다.
-          const cityMapping: Record<string, string[]> = {
-            "31010": ["31011", "31012", "31013", "31014"], // 수원
-            "31020": ["31021", "31022", "31023"],         // 성남
-            "31040": ["31041", "31042"],                 // 안양
-            "31090": ["31091", "31092"],                 // 안산
-            "31100": ["31101", "31103", "31104"],         // 고양
-            "31190": ["31191", "31192", "31193"],         // 용인
-            "33010": ["33011", "33012"],                 // 청주
-            "34010": ["34011", "34012"],                 // 천안
-            "35010": ["35011", "35012"],                 // 전주
-            "37010": ["37011", "37012"],                 // 포항
-            "38110": ["38111", "38112", "38113", "38114", "38115"] // 창원
-          };
-
-          if (cityMapping[options.region]) {
-            params.dtl_region = cityMapping[options.region].join(';');
-          } else {
-            params.dtl_region = options.region;
-          }
-        }
+        params.region = options.region.substring(0, 2);
+        params.dtl_region = options.region; // 🛡️ 정확한 구 코드 매칭
       }
 
-      console.log(`[BookRepository] Fetching from ${endpoint} with mapped params:`, params);
+      console.log(`[BookRepository] Fetching from ${endpoint}:`, params.dtl_region);
       const data = await this.fetch(endpoint, params);
       const docs = (data as any).response?.docs || [];
 
       return docs.map((book: any) => BookSchema.parse(this.mapBookData(book.doc)));
     } catch (error) {
-      console.error("[BookRepository] Get popular books error:", error);
-      return [];
-    }
-  }
-
-  async getTrendingBooks(options?: PopularBooksOptions): Promise<Book[]> {
-    try {
-      const searchDt = options?.endDt || new Date().toISOString().split("T")[0];
-      const data = await this.fetch("hotTrend", {
-        searchDt,
-      });
-
-      const results = (data as any).response?.results || [];
-      // hotTrend 응답: results -> result -> docs -> doc
-      const books = results[0]?.result?.docs || [];
-      return books.map((book: any) => BookSchema.parse(this.mapBookData(book.doc)));
-    } catch (error) {
-      console.error("Get trending books error:", error);
-      return [];
-    }
-  }
-
-  async getNewArrivals(options?: PopularBooksOptions): Promise<Book[]> {
-    try {
-      // 신착도서조회(newArrivalBook)는 libCode가 필수이므로, 
-      // 범용적인 신간 조회를 위해 도서검색(srchBooks) API를 활용하여 출판일순 정렬로 대체함.
-      const data = await this.fetch("srchBooks", {
-        sort: "pubYear",
-        order: "desc",
-        pageNo: options?.pageNo || 1,
-        pageSize: options?.pageSize || 20,
-      });
-
-      const books = (data as any).response?.docs || [];
-      return books.map((book: any) => BookSchema.parse(this.mapBookData(book.doc)));
-    } catch (error) {
-      console.error("Get new arrivals error:", error);
-      return [];
-    }
-  }
-
-  async getRecommendedForEnthusiasts(options?: PopularBooksOptions): Promise<Book[]> {
-    try {
-      const data = await this.fetch("recommandList", {
-        type: "mania",
-        isbn13: "9788983922571", // 샘플 ISBN, 실제로는 입력받아야 함. 일단 하드코딩 또는 options에서 받아야 하나 options에 isbn 없음.
-        // maniaList는 특정 책 기반 추천이므로 ISBN 필수. 
-        // 일단 인기있는 책 하나를 기준으로 하거나 빈 리스트 반환해야 함.
-        // 여기서는 임시로 빈 리스트 처리 또는 에러 방지.
-      });
-      // FIXME: ISBN이 필요한데 options에 없음. 일단 넘어가지만 추후 수정 필요.
-      
-      const books = (data as any).response?.docs || [];
-      return books.map((book: any) => BookSchema.parse(this.mapBookData(book.book)));
-    } catch (error) {
-      console.error("Get enthusiast recommendations error:", error);
-      return [];
-    }
-  }
-
-  async getRecommendedForReaders(isbn: string): Promise<Book[]> {
-    try {
-      const data = await this.fetch("recommandList", {
-        isbn13: isbn,
-        type: "reader",
-      });
-      const books = (data as any).response?.docs || [];
-      return books.map((book: any) => BookSchema.parse(this.mapBookData(book.book)));
-    } catch (error) {
-      console.error("Get reader recommendations error:", error);
-      return [];
-    }
-  }
-
-  async getMonthlyKeywords(): Promise<string[]> {
-    try {
-      const data = await this.fetch("monthlyKeywords");
-      const keywords = (data as any).response?.keywords || [];
-      return keywords.map((k: any) => k.word || k.keyword);
-    } catch (error) {
-      console.error("Get monthly keywords error:", error);
       return [];
     }
   }
@@ -351,7 +189,6 @@ export class BookRepositoryImpl implements BookRepository {
       const data = await this.fetch("usageAnalysisList", { isbn13: isbn });
       return (data as any).response || null;
     } catch (error) {
-      console.error("Get usage analysis error:", error);
       return null;
     }
   }
@@ -367,49 +204,82 @@ export class BookRepositoryImpl implements BookRepository {
     }
   }
 
+  async getTrendingBooks(options?: PopularBooksOptions): Promise<Book[]> {
+    try {
+      const searchDt = options?.endDt || new Date().toISOString().split("T")[0];
+      const data = await this.fetch("hotTrend", { searchDt });
+      const results = (data as any).response?.results || [];
+      const books = results[0]?.result?.docs || [];
+      return books.map((book: any) => BookSchema.parse(this.mapBookData(book.doc)));
+    } catch (error) {
+      return [];
+    }
+  }
 
+  async getNewArrivals(options?: PopularBooksOptions): Promise<Book[]> {
+    try {
+      const data = await this.fetch("srchBooks", {
+        sort: "pubYear",
+        order: "desc",
+        pageNo: options?.pageNo || 1,
+        pageSize: options?.pageSize || 20,
+      });
+      const books = (data as any).response?.docs || [];
+      return books.map((book: any) => BookSchema.parse(this.mapBookData(book.doc)));
+    } catch (error) {
+      return [];
+    }
+  }
+
+  async getRecommendedForEnthusiasts(options?: PopularBooksOptions): Promise<Book[]> {
+    return []; // 미구현
+  }
+
+  async getRecommendedForReaders(isbn: string): Promise<Book[]> {
+    try {
+      const data = await this.fetch("recommandList", { isbn13: isbn, type: "reader" });
+      const books = (data as any).response?.docs || [];
+      return books.map((book: any) => BookSchema.parse(this.mapBookData(book.book)));
+    } catch (error) {
+      return [];
+    }
+  }
+
+  async getMonthlyKeywords(): Promise<string[]> {
+    try {
+      const data = await this.fetch("monthlyKeywords");
+      const keywords = (data as any).response?.keywords || [];
+      return keywords.map((k: any) => k.word || k.keyword);
+    } catch (error) {
+      return [];
+    }
+  }
+
+  async getLibraryUsageTrend(libCode: string, type: "D" | "H"): Promise<any> {
+    try {
+      const data = await this.fetch("usageTrend", { libCode, type });
+      return (data as any).response || null;
+    } catch (error) {
+      return null;
+    }
+  }
 
   async deepScanLibraries(isbn: string, regionCode: string): Promise<{
     libraries: BookAvailability[];
     totalCount: number;
   }> {
     try {
-      // 1. 해당 지역 모든 도서관 조회
-      let region = regionCode.substring(0, 2);
-      let dtl_region: string | undefined = regionCode;
-
-      // 🛡️ 수원(31010), 안양(31040) 처럼 구가 있는 도시인 경우
-      // dtl_region을 넣으면 하위 구 도서관이 누락될 수 있으므로, 
-      // 아예 region(경기도)으로 넓게 받고 dtl_region으로 시작하는 코드들만 필터링하거나
-      // API 특성에 따라 dtl_region을 비우고 상위 코드로만 조회하는 방식 선택
-      console.log(`[DeepScan] Fetching libraries for regionCode: ${regionCode}`);
-      
+      const region = regionCode.substring(0, 2);
       const { libraries: allLibraries } = await libraryRepository.getLibraries({
         region,
-        dtl_region: dtl_region, 
+        dtl_region: regionCode, 
         pageSize: 150, 
       });
 
-      // 만약 시 코드로 조회했는데 결과가 너무 적으면 '구' 단위 누락 가능성 -> 도(Province) 전체 조회로 전환
-      let targetLibraries = allLibraries;
-      if (allLibraries.length < 5) {
-          const { libraries: provinceLibraries } = await libraryRepository.getLibraries({
-            region,
-            pageSize: 500,
-          });
-          // 내가 선택한 도시 코드로 시작하는 도서관들만 필터링 (예: 31010 수원 시 내의 모든 도서관)
-          targetLibraries = provinceLibraries.filter(lib => String(lib.libCode).startsWith(regionCode.substring(0, 4)));
-      }
-
-      console.log(`[DeepScan] Checking ${targetLibraries.length} target libraries...`);
-
-      // 2. 병렬로 소장 여부 확인 (bookExist API)
       const checkPromises = allLibraries.map(async (lib) => {
         try {
           const availability = await this.getBookAvailability(isbn, lib.libCode);
-          
           if (availability.length > 0 && availability[0].hasBook) {
-            // bookExist 결과에는 위경도/홈페이지가 없으므로 도서관 정보에서 병합
             return {
               ...availability[0],
               libraryName: lib.libName,
@@ -429,14 +299,8 @@ export class BookRepositoryImpl implements BookRepository {
       const results = await Promise.all(checkPromises);
       const validResults = results.filter((r) => r !== null) as BookAvailability[];
 
-      console.log(`[DeepScan] Found ${validResults.length} libraries.`);
-
-      return {
-        libraries: validResults,
-        totalCount: validResults.length,
-      };
+      return { libraries: validResults, totalCount: validResults.length };
     } catch (error) {
-      console.error("Deep scan error:", error);
       return { libraries: [], totalCount: 0 };
     }
   }
@@ -456,10 +320,9 @@ export class BookRepositoryImpl implements BookRepository {
       keywords: data.keywords ? data.keywords.split(";") : undefined,
       loanCnt: data.loan_count || data.loanCnt ? Number(data.loan_count || data.loanCnt) : undefined,
       ranking: data.ranking ? Number(data.ranking) : undefined,
-      additionSymbol: data.addition_symbol || data.additionSymbol, // 부가기호(대상) 추가
+      additionSymbol: data.addition_symbol || data.additionSymbol,
     };
   }
 }
 
-// Singleton 인스턴스
 export const bookRepository = new BookRepositoryImpl();
