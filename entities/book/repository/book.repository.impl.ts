@@ -219,7 +219,6 @@ export class BookRepositoryImpl implements BookRepository {
         pageSize: options?.pageSize || 20,
       };
 
-      // 📅 데이터 확보를 위해 기간을 최근 6개월로 확장 (매뉴얼 권장 방식)
       const date = new Date();
       date.setMonth(date.getMonth() - 6);
       params.startDt = date.toISOString().split('T')[0];
@@ -229,25 +228,26 @@ export class BookRepositoryImpl implements BookRepository {
 
       if (options?.region) {
         endpoint = "loanItemSrchByLib"; 
+        const region = options.region.substring(0, 2);
+        params.region = region;
+
         if (options.region.length === 5) {
-          params.region = options.region.substring(0, 2);
-          params.dtl_region = options.region;
-        } else {
-          params.region = options.region;
+          // 🛡️ [혁신] 대도시 하위 구 데이터 통합 로직
+          // 사용자가 '안양시(31040)'를 선택했다면, 만안구(31041), 동안구(31042) 데이터를 모두 가져와야 함.
+          if (options.region.endsWith('0')) {
+            const cityPrefix = options.region.substring(0, 4);
+            // 매뉴얼상 안양(3104), 수원(3101), 성남(3102) 등은 하위 구가 1~5번까지 분포
+            const subRegionCodes = [0, 1, 2, 3, 4, 5].map(n => `${cityPrefix}${n}`).join(';');
+            params.dtl_region = subRegionCodes; 
+          } else {
+            params.dtl_region = options.region;
+          }
         }
       }
 
-      console.log(`[BookRepository] Fetching from ${endpoint} with params:`, params);
+      console.log(`[BookRepository] Fetching from ${endpoint} with multi-region params:`, params);
       const data = await this.fetch(endpoint, params);
       const docs = (data as any).response?.docs || [];
-
-      // 🛡️ 만약 선택한 구(dtl_region) 결과가 없으면 상위 시 코드로 재시도
-      // 예: 만안구(31041) 결과 없으면 안양시(31040)로 재시도
-      if (docs.length === 0 && options?.region && options.region.length === 5 && !options.region.endsWith('0')) {
-          const cityCode = options.region.substring(0, 4) + '0';
-          console.log(`[BookRepository] Retrying with city code: ${cityCode}`);
-          return this.getPopularBooks({ ...options, region: cityCode });
-      }
 
       return docs.map((book: any) => BookSchema.parse(this.mapBookData(book.doc)));
     } catch (error) {
