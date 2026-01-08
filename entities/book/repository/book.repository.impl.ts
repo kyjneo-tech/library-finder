@@ -151,42 +151,40 @@ export class BookRepositoryImpl implements BookRepository {
     totalCount: number;
   }> {
     try {
-      const params: any = { isbn, pageSize: 500 }; // 범위를 넓게 잡아서 누락 방지
+      const params: any = { isbn, pageSize: 500 }; 
 
       if (regionCode) {
-        // 시/도 단위(31)로 일단 검색하되, 아래에서 엄격하게 필터링할 예정
         params.region = regionCode.substring(0, 2);
+        
+        // 🛡️ [지능형 구 코드 자동 맵핑] 소장 도서관 검색에도 적용
+        if (regionCode.length === 5 && regionCode.endsWith('0')) {
+            const cityMapping: Record<string, string[]> = {
+                "31010": ["31011", "31012", "31013", "31014"], // 수원
+                "31020": ["31021", "31022", "31023"],         // 성남
+                "31040": ["31041", "31042"],                 // 안양
+                "31090": ["31091", "31092"],                 // 안산
+                "31100": ["31101", "31103", "31104"],         // 고양
+                "31190": ["31191", "31192", "31193"],         // 용인
+                // ... 필요 시 추가
+            };
+            if (cityMapping[regionCode]) {
+                params.dtl_region = cityMapping[regionCode].join(';');
+            } else {
+                params.dtl_region = regionCode;
+            }
+        } else {
+            params.dtl_region = regionCode;
+        }
       } else {
         params.region = "11";
       }
 
-      console.log(`[BookRepository] Fetching libraries for ISBN: ${isbn}, Province: ${params.region}`);
+      console.log(`[BookRepository] Fetching libraries with mapped params:`, params);
       const data = await this.fetch("libSrchByBook", params);
       const libraries = (data as any).response?.libs || [];
 
-      // 🛡️ [엄격한 필터링] 내가 선택한 도시(안양 3104X)에 속한 도서관만 필터링
-      const cityPrefix = regionCode ? regionCode.substring(0, 4) : "";
-      
-      const filteredLibs = libraries.filter((libWrapper: any) => {
-        const lib = libWrapper.lib;
-        const libCodeStr = String(lib.libCode);
-        
-        if (regionCode) {
-          if (regionCode.endsWith('0')) {
-            // 안양시(31040) 선택 시 -> 3104로 시작하는 모든 구 도서관 포함
-            return libCodeStr.startsWith(cityPrefix);
-          } else {
-            // 만안구(31041) 등 특정 구 선택 시 -> 해당 구 코드와 일치하는 것만
-            return libCodeStr === regionCode;
-          }
-        }
-        return true;
-      });
-
-      console.log(`[BookRepository] Filtered ${filteredLibs.length} libraries in city prefix: ${cityPrefix}`);
-
       return {
-        libraries: filteredLibs.map((libWrapper: any) => {
+        libraries: libraries.map((libWrapper: any) => {
           const lib = libWrapper.lib;
           return BookAvailabilitySchema.parse({
             isbn,
@@ -200,7 +198,7 @@ export class BookRepositoryImpl implements BookRepository {
             homepage: lib.homepage || undefined,
           });
         }),
-        totalCount: filteredLibs.length,
+        totalCount: libraries.length,
       };
     } catch (error) {
       console.error("Get libraries with book error:", error);
@@ -232,20 +230,32 @@ export class BookRepositoryImpl implements BookRepository {
         params.region = region;
 
         if (options.region.length === 5) {
-          // 🛡️ [혁신] 대도시 하위 구 데이터 통합 로직
-          // 사용자가 '안양시(31040)'를 선택했다면, 만안구(31041), 동안구(31042) 데이터를 모두 가져와야 함.
-          if (options.region.endsWith('0')) {
-            const cityPrefix = options.region.substring(0, 4);
-            // 매뉴얼상 안양(3104), 수원(3101), 성남(3102) 등은 하위 구가 1~5번까지 분포
-            const subRegionCodes = [0, 1, 2, 3, 4, 5].map(n => `${cityPrefix}${n}`).join(';');
-            params.dtl_region = subRegionCodes; 
+          // 🛡️ [지능형 구 코드 자동 맵핑]
+          // API가 '시 전체 코드(예: 31010)'에는 데이터를 주지 않으므로, 
+          // 하위 구 코드들(31011, 31012...)을 자동으로 찾아내어 통합 요청합니다.
+          const cityMapping: Record<string, string[]> = {
+            "31010": ["31011", "31012", "31013", "31014"], // 수원
+            "31020": ["31021", "31022", "31023"],         // 성남
+            "31040": ["31041", "31042"],                 // 안양
+            "31090": ["31091", "31092"],                 // 안산
+            "31100": ["31101", "31103", "31104"],         // 고양
+            "31190": ["31191", "31192", "31193"],         // 용인
+            "33010": ["33011", "33012"],                 // 청주
+            "34010": ["34011", "34012"],                 // 천안
+            "35010": ["35011", "35012"],                 // 전주
+            "37010": ["37011", "37012"],                 // 포항
+            "38110": ["38111", "38112", "38113", "38114", "38115"] // 창원
+          };
+
+          if (cityMapping[options.region]) {
+            params.dtl_region = cityMapping[options.region].join(';');
           } else {
             params.dtl_region = options.region;
           }
         }
       }
 
-      console.log(`[BookRepository] Fetching from ${endpoint} with multi-region params:`, params);
+      console.log(`[BookRepository] Fetching from ${endpoint} with mapped params:`, params);
       const data = await this.fetch(endpoint, params);
       const docs = (data as any).response?.docs || [];
 
