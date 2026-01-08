@@ -174,7 +174,12 @@ export class BookRepositoryImpl implements BookRepository {
         params.dtl_region = options.region; // 🛡️ 정확한 구 코드 매칭
       }
 
-      console.log(`[BookRepository] Fetching from ${endpoint} with mapped params:`, params);
+      // 🛡️ 아동용 필터가 명시적으로 들어온 경우 파라미터 고정
+      if (options?.addCode === '7') {
+          params.addCode = '7';
+      }
+
+      console.log(`[BookRepository] Fetching from ${endpoint}:`, params.dtl_region || "Nationwide");
       const data = await this.fetch(endpoint, params);
       let docs = (data as any).response?.docs || [];
 

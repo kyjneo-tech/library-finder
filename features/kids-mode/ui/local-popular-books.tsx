@@ -17,17 +17,16 @@ export function LocalPopularBooks({ onBookSelect }: LocalPopularBooksProps) {
   const [isFallback, setIsFallback] = useState(false);
 
   const { getRegionCode, getDisplayName } = useRegionStore();
-  const { fetchFamilyPopularBooks } = useRecommendationsStore(); // ✅ 리팩토링된 메서드 사용
+  const { fetchLocalKidsPopularBooks } = useRecommendationsStore(); // ✅ 키즈 전용 메서드 사용
 
   const fetchLocalPopular = async () => {
     setLoading(true);
     try {
       const regionCode = getRegionCode();
-      // fetchFamilyPopularBooks를 호출하되, 내부 로직이 regionCode 기반으로 작동함
-      const result = await fetchFamilyPopularBooks(regionCode || undefined);
+      // 🛡️ 아동 전용 필터가 적용된 데이터를 가져옴
+      const result = await fetchLocalKidsPopularBooks(regionCode || undefined);
       
       setBooks(result.slice(0, 10));
-      // isFallback 로직은 현재 store에서 명시적으로 제공하지 않으므로 제거하거나 추후 보강
     } catch (error) {
       console.error("[LocalPopularBooks] Failed to fetch:", error);
       setBooks([]);
