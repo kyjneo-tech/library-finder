@@ -47,7 +47,12 @@ export function LibraryMap({ libraries: externalLibraries }: LibraryMapProps) {
       }, 100);
     };
 
-    window.kakao.maps.load(initMap);
+    // 🛡️ 카카오 객체 존재 여부 체크 후 load 호출
+    if (window.kakao && window.kakao.maps) {
+      window.kakao.maps.load(initMap);
+    } else {
+      console.warn("카카오맵 SDK가 아직 로드되지 않았습니다.");
+    }
   }, [userLocation]);
 
   // 화면 크기 변경 시 relayout

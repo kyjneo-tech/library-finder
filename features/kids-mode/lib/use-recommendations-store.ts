@@ -12,13 +12,18 @@ interface RecommendationsState {
   localPopularBooks: Record<string, Book[]>;
   localPopularBooksTimestamp: number;
 
+  // 가족 전체 인기 도서 캐시
+  familyPopularBooks: Book[];
+  familyPopularBooksTimestamp: number;
+
   // Actions
   fetchAgeRecommendations: (age: string) => Promise<Book[]>;
   fetchLocalPopularBooks: (regionCode: string) => Promise<{ books: Book[], isFallback: boolean }>;
+  fetchFamilyPopularBooks: (regionCode?: string) => Promise<Book[]>;
 }
 
-// 캐시 유효 시간 (예: 1시간)
-const CACHE_DURATION = 60 * 60 * 1000;
+// 캐시 유효 시간 (인기 도서는 6시간으로 설정하여 API 호출 최소화)
+const CACHE_DURATION = 6 * 60 * 60 * 1000;
 
 export const useRecommendationsStore = create<RecommendationsState>()(
   persist(
@@ -27,6 +32,8 @@ export const useRecommendationsStore = create<RecommendationsState>()(
       ageRecommendationsTimestamp: 0,
       localPopularBooks: {},
       localPopularBooksTimestamp: 0,
+      familyPopularBooks: [],
+      familyPopularBooksTimestamp: 0,
 
       fetchAgeRecommendations: async (age: string) => {
         const { ageRecommendations, ageRecommendationsTimestamp } = get();
@@ -89,7 +96,6 @@ export const useRecommendationsStore = create<RecommendationsState>()(
             now - localPopularBooksTimestamp < CACHE_DURATION
         ) {
             console.log(`[Cache] Using cached local books for region: ${cacheKey}`);
-            // 캐시된 데이터 반환 (Fallback 여부는 알 수 없으므로 false 가정)
             return { books: localPopularBooks[cacheKey], isFallback: false };
         }
 
@@ -127,6 +133,37 @@ export const useRecommendationsStore = create<RecommendationsState>()(
         } catch (error) {
             console.error("Failed to fetch local popular books:", error);
             return { books: [], isFallback: false };
+        }
+      },
+
+      fetchFamilyPopularBooks: async (regionCode?: string) => {
+        const { familyPopularBooks, familyPopularBooksTimestamp } = get();
+        const now = Date.now();
+
+        if (
+            familyPopularBooks.length > 0 &&
+            now - familyPopularBooksTimestamp < CACHE_DURATION
+        ) {
+            return familyPopularBooks;
+        }
+
+        try {
+            // 가족 전체를 위해 전 연령대(20, 30, 40) 및 청소년(14) 인기 도서 요청
+            const books = await bookRepository.getPopularBooks({
+                region: regionCode || undefined,
+                age: "14;20;30;40", 
+                addCode: undefined, 
+                pageSize: 10,
+            });
+
+            set({
+                familyPopularBooks: books,
+                familyPopularBooksTimestamp: now
+            });
+            return books;
+        } catch (error) {
+            console.error("Failed to fetch family recommendations:", error);
+            return [];
         }
       },
     }),

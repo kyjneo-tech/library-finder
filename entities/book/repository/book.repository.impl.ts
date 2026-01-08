@@ -200,7 +200,10 @@ export class BookRepositoryImpl implements BookRepository {
         pageSize: options?.pageSize || 20,
       };
 
+      let endpoint = "loanItemSrch"; // 기본: 전국 인기 도서
+
       if (options?.region) {
+        endpoint = "loanItemSrchByLib"; // 지역 선택 시: 지역별 인기 도서 (대여 확률 훨씬 높음)
         if (options.region.length === 5) {
           params.region = options.region.substring(0, 2);
           params.dtl_region = options.region;
@@ -209,12 +212,11 @@ export class BookRepositoryImpl implements BookRepository {
         }
       }
 
-      const data = await this.fetch("loanItemSrch", params);
+      const data = await this.fetch(endpoint, params);
 
-      console.log("[BookRepository] loanItemSrch response:", data);
-      const books = (data as any).response?.docs || [];
-      console.log("[BookRepository] Parsed books count:", books.length);
-      return books.map((book: any) => BookSchema.parse(this.mapBookData(book.doc)));
+      console.log(`[BookRepository] ${endpoint} response:`, data);
+      const docs = (data as any).response?.docs || [];
+      return docs.map((book: any) => BookSchema.parse(this.mapBookData(book.doc)));
     } catch (error) {
       console.error("[BookRepository] Get popular books error:", error);
       return [];

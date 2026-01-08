@@ -19,7 +19,7 @@ interface SearchModeState {
 export const useSearchMode = create<SearchModeState>()(
   persist(
     (set, get) => ({
-      mode: 'kids', // 기본: 아이책 모드
+      mode: 'kids', // 기본은 친근하게 키즈로 시작하되 전체를 포괄
 
       setMode: (mode) => {
         set({ mode });
@@ -32,7 +32,7 @@ export const useSearchMode = create<SearchModeState>()(
           return {
             mode: 'kids',
             showKidsFeatures: true,
-            placeholder: '우리 아이가 좋아할 책을 찾아보세요 🧸',
+            placeholder: '아이와 함께 읽을 책을 찾아보세요 🧸',
             recommendations: 'kids',
           };
         }
@@ -40,7 +40,7 @@ export const useSearchMode = create<SearchModeState>()(
         return {
           mode: 'general',
           showKidsFeatures: false,
-          placeholder: '찾으시는 도서명을 입력해 주세요',
+          placeholder: '우리 가족 모두를 위한 책 검색 📚',
           recommendations: 'popular',
         };
       },
