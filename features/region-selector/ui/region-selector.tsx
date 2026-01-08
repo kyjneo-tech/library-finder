@@ -81,35 +81,38 @@ export function RegionSelector({ className }: RegionSelectorProps) {
           {/* 드롭다운 패널 */}
           <div className="absolute left-0 right-0 top-full mt-2 bg-white border border-gray-200 rounded-xl shadow-xl z-50 max-h-[60vh] overflow-hidden">
             {/* 헤더 */}
-            <div className="sticky top-0 bg-white border-b border-gray-100 px-4 py-3 flex items-center gap-2">
+            <div className="sticky top-0 bg-white border-b border-gray-100 px-4 py-4 flex items-center gap-2">
               {step === "subRegion" && (
                 <button
                   type="button"
                   onClick={handleBack}
-                  className="text-sm text-blue-500 hover:text-blue-600 font-medium"
+                  className="w-8 h-8 flex items-center justify-center bg-gray-50 rounded-full text-blue-500 hover:bg-blue-50 transition-colors"
                 >
-                  ← 뒤로
+                  ←
                 </button>
               )}
-              <span className="font-semibold text-gray-800">
-                {step === "region" ? "시/도 선택" : `${selectedRegion?.name} - 시/군/구 선택`}
-              </span>
+              <div>
+                <span className="text-xs font-black text-gray-400 uppercase tracking-widest block mb-0.5">Step {step === "region" ? "01" : "02"}</span>
+                <span className="font-extrabold text-gray-900">
+                    {step === "region" ? "어디에 사시나요?" : `${selectedRegion?.name} 어디인가요?`}
+                </span>
+              </div>
             </div>
 
             {/* 목록 */}
-            <div className="overflow-y-auto max-h-[50vh] p-2">
+            <div className="overflow-y-auto max-h-[50vh] p-3">
               {step === "region" ? (
-                <div className="grid grid-cols-2 gap-1">
+                <div className="grid grid-cols-2 gap-2">
                   {REGIONS.map((region) => (
                     <button
                       key={region.code}
                       type="button"
                       onClick={() => handleRegionSelect(region)}
                       className={cn(
-                        "px-3 py-2.5 text-left rounded-lg text-sm font-medium transition-colors",
+                        "px-4 py-3 text-left rounded-2xl text-sm font-bold transition-all border-2",
                         selectedRegion?.code === region.code
-                          ? "bg-blue-50 text-blue-600"
-                          : "hover:bg-gray-50 text-gray-700"
+                          ? "bg-blue-500 text-white border-transparent shadow-lg shadow-blue-100"
+                          : "bg-white text-gray-600 border-gray-50 hover:border-blue-100 hover:bg-blue-50/30"
                       )}
                     >
                       {region.name}
@@ -117,25 +120,28 @@ export function RegionSelector({ className }: RegionSelectorProps) {
                   ))}
                 </div>
               ) : (
-                <div className="grid grid-cols-2 gap-1">
-                  {selectedRegion?.subRegions?.map((subRegion) => (
-                    <button
-                      key={subRegion.code}
-                      type="button"
-                      onClick={() => handleSubRegionSelect(subRegion)}
-                      className={cn(
-                        "px-3 py-2.5 text-left rounded-lg text-sm font-medium transition-colors flex items-center justify-between",
-                        selectedSubRegion?.code === subRegion.code
-                          ? "bg-blue-50 text-blue-600"
-                          : "hover:bg-gray-50 text-gray-700"
-                      )}
-                    >
-                      <span>{subRegion.name}</span>
-                      {selectedSubRegion?.code === subRegion.code && (
-                        <Check className="w-4 h-4" />
-                      )}
-                    </button>
-                  ))}
+                <div className="grid grid-cols-1 gap-2">
+                  {/* 시/군/구 목록 */}
+                  <div className="grid grid-cols-2 gap-2">
+                    {selectedRegion?.subRegions?.map((subRegion) => (
+                        <button
+                        key={subRegion.code}
+                        type="button"
+                        onClick={() => handleSubRegionSelect(subRegion)}
+                        className={cn(
+                            "px-4 py-3 text-left rounded-2xl text-sm font-bold transition-all border-2 flex items-center justify-between",
+                            selectedSubRegion?.code === subRegion.code
+                            ? "bg-purple-500 text-white border-transparent shadow-lg shadow-purple-100"
+                            : "bg-white text-gray-600 border-gray-50 hover:border-purple-100 hover:bg-purple-50/30"
+                        )}
+                        >
+                        <span>{subRegion.name}</span>
+                        {selectedSubRegion?.code === subRegion.code && (
+                            <Check className="w-4 h-4" />
+                        )}
+                        </button>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>

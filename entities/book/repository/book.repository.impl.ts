@@ -174,9 +174,18 @@ export class BookRepositoryImpl implements BookRepository {
         params.dtl_region = options.region; // 🛡️ 정확한 구 코드 매칭
       }
 
-      console.log(`[BookRepository] Fetching from ${endpoint}:`, params.dtl_region);
+      console.log(`[BookRepository] Fetching from ${endpoint} with mapped params:`, params);
       const data = await this.fetch(endpoint, params);
-      const docs = (data as any).response?.docs || [];
+      let docs = (data as any).response?.docs || [];
+
+      // 🛡️ [혁신] 데이터 절벽 해결 (의령군 등 결과 0건인 경우)
+      if (docs.length === 0 && params.dtl_region) {
+          console.warn(`[BookRepository] ${params.dtl_region} has zero data. Falling back to province ${params.region}`);
+          // 세부 지역 코드를 비우고 상위 지역(Province)으로 재시도
+          delete params.dtl_region;
+          const fallbackData = await this.fetch(endpoint, params);
+          docs = (fallbackData as any).response?.docs || [];
+      }
 
       return docs.map((book: any) => BookSchema.parse(this.mapBookData(book.doc)));
     } catch (error) {
