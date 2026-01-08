@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { BookOpen, TrendingUp, ChevronRight } from "lucide-react";
+import { BookOpen, TrendingUp, ChevronRight, CheckCircle2 } from "lucide-react";
 import { useRecommendationsStore } from "@/features/kids-mode/lib/use-recommendations-store";
 import { useRegionStore } from "@/features/region-selector/lib/use-region-store";
 import { Book } from "@/entities/book/model/types";
