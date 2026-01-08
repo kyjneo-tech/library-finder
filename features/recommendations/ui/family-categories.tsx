@@ -69,11 +69,14 @@ const FAMILY_CATEGORIES: Category[] = [
 export function FamilyCategories({ onCategorySearch }: FamilyCategoriesProps) {
   return (
     <section className="mx-4 mt-10 mb-12">
-      <div className="flex items-center justify-between mb-5 px-1">
+      <div className="flex flex-col mb-5 px-1">
         <h3 className="text-lg font-black text-gray-800 flex items-center gap-2">
-           <span className="text-xl">👨‍👩‍👧‍👦</span>
-           가족 모두를 위한 주제
+           <span className="text-xl">📊</span>
+           분야별 인기 대출 도서
         </h3>
+        <p className="text-[11px] text-gray-400 mt-1 font-medium">
+            주제별로 지금 가장 많이 읽히는 책들을 추천해 드릴게요.
+        </p>
       </div>
       <div className="grid grid-cols-2 gap-3">
         {FAMILY_CATEGORIES.map((cat) => (

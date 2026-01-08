@@ -36,6 +36,7 @@ interface BookSearchState {
   deepScan: (isbn: string, region: string) => Promise<void>;
   clearLibraries: () => void;
   searchByKdc: (kdc: string, keyword: string) => Promise<void>;
+  setBooks: (books: Book[]) => void;
 }
 
 export const useBookSearch = create<BookSearchState>((set, get) => ({
@@ -309,5 +310,15 @@ export const useBookSearch = create<BookSearchState>((set, get) => ({
 
   clearLibraries: () => {
     set({ librariesWithBook: [], selectedBook: null });
+  },
+
+  setBooks: (books: Book[]) => {
+    set({ 
+      books, 
+      totalCount: books.length,
+      loading: false,
+      selectedBook: null,
+      librariesWithBook: []
+    });
   },
 }));

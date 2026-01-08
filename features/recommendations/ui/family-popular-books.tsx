@@ -15,17 +15,19 @@ export function FamilyPopularBooks({ onBookSelect }: FamilyPopularBooksProps) {
   const [books, setBooks] = useState<Book[]>([]);
   const [loading, setLoading] = useState(false);
   const { fetchFamilyPopularBooks } = useRecommendationsStore();
-  const { selectedRegion } = useRegionStore();
+  const { selectedRegion, selectedSubRegion } = useRegionStore();
 
   useEffect(() => {
     const loadBooks = async () => {
       setLoading(true);
-      const data = await fetchFamilyPopularBooks(selectedRegion?.code);
+      // 세부 지역 코드가 있으면 그것을 사용, 없으면 광역 코드를 사용
+      const regionCode = selectedSubRegion?.code || selectedRegion?.code;
+      const data = await fetchFamilyPopularBooks(regionCode);
       setBooks(data);
       setLoading(false);
     };
     loadBooks();
-  }, [selectedRegion, fetchFamilyPopularBooks]);
+  }, [selectedRegion, selectedSubRegion, fetchFamilyPopularBooks]);
 
   if (loading) {
     return (
@@ -39,19 +41,22 @@ export function FamilyPopularBooks({ onBookSelect }: FamilyPopularBooksProps) {
 
   if (books.length === 0) return null;
 
+  // 표시할 지역 이름 (세부 지역이 있으면 세부 지역명 우선)
+  const regionName = selectedSubRegion?.name || selectedRegion?.name;
+
   return (
     <section className="mx-4 mt-10 mb-20">
       <div className="flex flex-col mb-5 px-1">
         <div className="flex items-center justify-between">
             <h3 className="text-lg font-black text-gray-800 flex items-center gap-2">
             <span className="text-xl">🔥</span>
-            {selectedRegion ? `${selectedRegion.name} 인기 대출 도서` : "가족 인기 대출 도서"}
+            {regionName ? `${regionName} 인기 대출 도서` : "가족 인기 대출 도서"}
             </h3>
             <span className="text-[10px] font-bold text-purple-600 bg-purple-50 px-2 py-1 rounded-lg uppercase tracking-wider">Verified</span>
         </div>
         <p className="text-[11px] text-gray-400 mt-1 font-medium">
-            {selectedRegion 
-                ? "우리 동네 도서관에서 실제로 가장 많이 대여되고 있는 책들이에요." 
+            {regionName 
+                ? `${regionName} 도서관들에서 실제로 가장 활발히 대여되고 있는 책들이에요.` 
                 : "전국 도서관 대출 데이터를 기반으로 검증된 도서들이에요."}
         </p>
       </div>

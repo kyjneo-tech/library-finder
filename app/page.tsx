@@ -61,9 +61,11 @@ export default function HomePage() {
     deepScan,
     clearLibraries,
     searchByKdc,
+    setBooks, // ✅ 수동으로 책 목록을 설정하기 위해 추가
   } = useBookSearch();
   const { loadLibraries } = useMapStore();
 
+  // 검색 실행
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!searchQuery.trim()) return;
@@ -71,13 +73,30 @@ export default function HomePage() {
     setShowSearchResults(true);
   };
 
+  // 카테고리/분야별 검색 (실시간 대출 실적 기반)
   const handleCategorySearch = async (keyword: string, kdc?: string) => {
     setSearchQuery(keyword);
+    
+    const regionCode = getRegionCode(); // 현재 선택된 (세부)지역 코드
+
     if (kdc) {
-      await searchByKdc(kdc, keyword);
-    } else {
-      await searchBooks({ query: keyword });
+      console.log(`[CategorySearch] Fetching loan ranking for KDC: ${kdc}, Region: ${regionCode}`);
+      // 네이버 검색 대신 실제 대출 통계 API 호출
+      const data = await bookRepository.getPopularBooks({
+        kdc,
+        region: regionCode || undefined,
+        pageSize: 20
+      });
+      
+      if (data && data.length > 0) {
+        setBooks(data); // 검색 결과창에 대출 순위 도서들 세팅
+        setShowSearchResults(true);
+        return;
+      }
     }
+    
+    // KDC 정보가 없거나 결과가 없는 경우 일반 검색 실행
+    await searchBooks({ query: keyword });
     setShowSearchResults(true);
   };
 
