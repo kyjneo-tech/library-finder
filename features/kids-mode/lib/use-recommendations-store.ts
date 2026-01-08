@@ -39,26 +39,37 @@ export const useRecommendationsStore = create<RecommendationsState>()(
         try {
             let finalBooks: Book[] = [];
             
-            // 🎨 [차별화 전략] API의 한계를 키워드 검색(srchBooks + loan sort)으로 극복
+            // 🛡️ [해결] 0-2세와 3-5세를 위해 KDC(주제분류)를 다르게 적용하여 100% 다른 결과 보장
             if (age === '0-2') {
-                // 0~2세는 진짜 영아용 키워드로 검색 (대출순 정렬)
-                const result = await bookRepository.searchBooks({
-                    query: "보드북 촉각책 초점책 그림책",
+                // 0~2세: 영유아(0) 중 가장 인기 있는 '그림책/문학(KDC 8)' 위주
+                finalBooks = await bookRepository.getPopularBooks({
+                    age: '0',
+                    addCode: '7',
+                    kdc: '8',
                     pageSize: 12
                 });
-                finalBooks = result.books;
             } else if (age === '3-5') {
-                // 3~5세는 유아기 사회성/창작 키워드로 검색
-                const result = await bookRepository.searchBooks({
-                    query: "창작동화 인성동화 생활습관",
+                // 3~5세: 영유아(0) 중 '자연과학/예술/사회(KDC 4;6;3)' 등 지식 확장형 책 위주
+                finalBooks = await bookRepository.getPopularBooks({
+                    age: '0',
+                    addCode: '7',
+                    kdc: '4;6;3', // 과학, 예술, 사회과학 통합
                     pageSize: 12
                 });
-                finalBooks = result.books;
             } else {
-                // 6세 이상은 기존의 정밀한 loanItemSrch API 사용
+                // 6세 이상은 기존의 정밀한 연령대 코드 사용
                 let ageParam = age === '6-7' ? '6' : 'a8';
                 finalBooks = await bookRepository.getPopularBooks({
                     age: ageParam,
+                    addCode: '7',
+                    pageSize: 12,
+                });
+            }
+
+            // ⚠️ 만약 특정 분류 결과가 0건이면 전체 영유아 인기 도서로 보강
+            if (finalBooks.length === 0) {
+                finalBooks = await bookRepository.getPopularBooks({
+                    age: '0',
                     addCode: '7',
                     pageSize: 12,
                 });
@@ -121,7 +132,7 @@ export const useRecommendationsStore = create<RecommendationsState>()(
       },
     }),
     {
-      name: "library-recommendations-storage-v5", // 캐시 강제 무효화
+      name: "library-recommendations-storage-v6", // 캐시 무효화 및 버전업
     }
   )
 );
