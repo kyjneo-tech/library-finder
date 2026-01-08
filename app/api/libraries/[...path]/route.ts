@@ -7,6 +7,16 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ path: string[] }> }
 ) {
+  // 🛡️ 보안 체크: 내 사이트에서 온 요청인지 확인 (CORS 대용)
+  const referer = request.headers.get("referer");
+  const host = request.headers.get("host");
+  
+  // 개발 환경(localhost)이 아니고, referer가 내 호스트를 포함하지 않으면 차단
+  if (process.env.NODE_ENV === "production" && referer && host && !referer.includes(host)) {
+    console.warn(`[API Proxy] Blocked request from: ${referer}`);
+    return NextResponse.json({ error: "Unauthorized access" }, { status: 403 });
+  }
+
   const { path } = await params;
   const endpoint = path.join("/");
   
@@ -36,7 +46,14 @@ export async function GET(
     }
 
     const data = await response.json();
-    return NextResponse.json(data);
+    
+    // ✅ 응답 반환 및 브라우저 캐싱 설정 (1시간)
+    // API 쿼터를 아끼기 위해 서버 응답도 캐싱합니다.
+    return NextResponse.json(data, {
+      headers: {
+        "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=59",
+      },
+    });
   } catch (error) {
     console.error("[API Proxy] Error:", error);
     return NextResponse.json(
