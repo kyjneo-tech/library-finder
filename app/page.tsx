@@ -205,16 +205,28 @@ export default function HomePage() {
               {selectedBook.bookImageURL ? (
                 <div className="relative group">
                   <div className="absolute inset-0 bg-purple-200 rounded-2xl rotate-3 scale-95 opacity-50 group-hover:rotate-6 transition-transform" />
-                  <img src={selectedBook.bookImageURL} alt={selectedBook.title} className="relative w-24 h-36 object-cover rounded-2xl shadow-lg shrink-0" />
+                  <img src={selectedBook.bookImageURL} alt={selectedBook.title} className="relative w-28 h-40 object-cover rounded-2xl shadow-lg shrink-0" />
                 </div>
               ) : (
-                <div className="w-24 h-36 bg-purple-50 rounded-2xl flex items-center justify-center shrink-0 border-2 border-dashed border-purple-200">
+                <div className="w-28 h-40 bg-purple-50 rounded-2xl flex items-center justify-center shrink-0 border-2 border-dashed border-purple-200">
                   <BookOpen className="w-12 h-12 text-purple-200" />
                 </div>
               )}
               <div className="flex-1 min-w-0 flex flex-col justify-center">
-                <h3 className="font-extrabold text-xl text-gray-900 leading-tight mb-2 line-clamp-2">{selectedBook.title}</h3>
-                <p className="text-sm font-bold text-purple-600 mb-2">{selectedBook.author}</p>
+                <div className="flex flex-wrap gap-2 mb-2">
+                   {selectedBook.className && (
+                     <span className="bg-purple-100 text-purple-700 text-[10px] font-black px-2 py-0.5 rounded-md">
+                        {selectedBook.className}
+                     </span>
+                   )}
+                   {selectedBook.loanCnt && (
+                     <span className="bg-orange-100 text-orange-700 text-[10px] font-black px-2 py-0.5 rounded-md">
+                        누적 대출 {selectedBook.loanCnt.toLocaleString()}회
+                     </span>
+                   )}
+                </div>
+                <h3 className="font-extrabold text-2xl text-gray-900 leading-tight mb-2 line-clamp-2">{selectedBook.title}</h3>
+                <p className="text-base font-bold text-purple-600 mb-2">{selectedBook.author}</p>
                 <div className="flex items-center gap-2 text-xs font-medium text-gray-400">
                   <span className="bg-gray-100 px-2 py-0.5 rounded-md">{selectedBook.publisher}</span>
                   {selectedBook.publishYear && <span className="bg-gray-100 px-2 py-0.5 rounded-md">{selectedBook.publishYear}년</span>}
@@ -222,9 +234,11 @@ export default function HomePage() {
               </div>
             </div>
             {selectedBook.description && (
-              <div className="mt-4 p-4 bg-purple-50/50 rounded-2xl">
-                <h4 className="text-[10px] font-black text-purple-400 uppercase tracking-[0.2em] mb-2 px-1">줄거리 미리보기</h4>
-                <p className="text-sm text-gray-700 leading-relaxed line-clamp-4 font-medium">{selectedBook.description}</p>
+              <div className="mt-4 p-5 bg-purple-50/50 rounded-2xl border border-purple-100/30">
+                <h4 className="text-xs font-black text-purple-400 uppercase tracking-[0.2em] mb-3 px-1">줄거리 미리보기</h4>
+                <p className="text-[15px] text-gray-800 leading-[1.8] font-medium tracking-tight">
+                    {selectedBook.description}
+                </p>
               </div>
             )}
           </div>

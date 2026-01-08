@@ -411,8 +411,9 @@ export class BookRepositoryImpl implements BookRepository {
       bookImageURL: data.bookImageURL || data.book_image_url,
       description: data.description,
       keywords: data.keywords ? data.keywords.split(";") : undefined,
-      loanCnt: Number(data.loanCnt) || undefined,
-      ranking: Number(data.ranking) || undefined,
+      loanCnt: data.loan_count || data.loanCnt ? Number(data.loan_count || data.loanCnt) : undefined,
+      ranking: data.ranking ? Number(data.ranking) : undefined,
+      additionSymbol: data.addition_symbol || data.additionSymbol, // 부가기호(대상) 추가
     };
   }
 }

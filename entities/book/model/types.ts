@@ -17,6 +17,7 @@ export const BookSchema = z.object({
   keywords: z.array(z.string()).optional(),
   loanCnt: z.number().optional(), // 대출 횟수
   ranking: z.number().optional(), // 순위
+  additionSymbol: z.string().optional(), // ISBN 부가기호 (대상 정보 등)
 });
 
 export type Book = z.infer<typeof BookSchema>;
