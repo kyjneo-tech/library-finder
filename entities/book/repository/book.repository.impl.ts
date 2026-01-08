@@ -151,50 +151,56 @@ export class BookRepositoryImpl implements BookRepository {
     totalCount: number;
   }> {
     try {
-      const params: any = { isbn };
+      const params: any = { isbn, pageSize: 500 }; // 범위를 넓게 잡아서 누락 방지
 
-      // 🛡️ [개선] 수원/안양 등 '구'가 있는 도시의 누락 방지 로직
       if (regionCode) {
-        if (regionCode.length === 5) {
-           // 5자리 코드(수원시 31010)가 들어오면 상위 시/도(경기도 31)로 일단 검색
-           // 이렇게 해야 하위 '구'들에 있는 도서관들이 싹 잡힙니다.
-           params.region = regionCode.substring(0, 2);
-           params.dtl_region = regionCode; 
-        } else {
-           params.region = regionCode;
-        }
+        // 시/도 단위(31)로 일단 검색하되, 아래에서 엄격하게 필터링할 예정
+        params.region = regionCode.substring(0, 2);
       } else {
-        params.region = "11"; // 기본값 서울
+        params.region = "11";
       }
 
-      console.log(`[BookRepository] Searching libraries for ISBN: ${isbn}, RegionParams:`, params);
+      console.log(`[BookRepository] Fetching libraries for ISBN: ${isbn}, Province: ${params.region}`);
       const data = await this.fetch("libSrchByBook", params);
-      let libraries = (data as any).response?.libs || [];
+      const libraries = (data as any).response?.libs || [];
 
-      // 만약 세부지역(구) 검색 결과가 너무 적으면, 해당 도(Province) 전체로 확장해서 재검색
-      if (libraries.length === 0 && params.dtl_region) {
-          console.log(`[BookRepository] No libs in ${params.dtl_region}, expanding search to region ${params.region}...`);
-          delete params.dtl_region;
-          const expandedData = await this.fetch("libSrchByBook", params);
-          libraries = (expandedData as any).response?.libs || [];
-      }
+      // 🛡️ [엄격한 필터링] 내가 선택한 도시(안양 3104X)에 속한 도서관만 필터링
+      const cityPrefix = regionCode ? regionCode.substring(0, 4) : "";
+      
+      const filteredLibs = libraries.filter((libWrapper: any) => {
+        const lib = libWrapper.lib;
+        const libCodeStr = String(lib.libCode);
+        
+        if (regionCode) {
+          if (regionCode.endsWith('0')) {
+            // 안양시(31040) 선택 시 -> 3104로 시작하는 모든 구 도서관 포함
+            return libCodeStr.startsWith(cityPrefix);
+          } else {
+            // 만안구(31041) 등 특정 구 선택 시 -> 해당 구 코드와 일치하는 것만
+            return libCodeStr === regionCode;
+          }
+        }
+        return true;
+      });
+
+      console.log(`[BookRepository] Filtered ${filteredLibs.length} libraries in city prefix: ${cityPrefix}`);
 
       return {
-        libraries: libraries.map((libWrapper: any) => {
+        libraries: filteredLibs.map((libWrapper: any) => {
           const lib = libWrapper.lib;
           return BookAvailabilitySchema.parse({
             isbn,
             libraryCode: lib.libCode,
             libraryName: lib.libName,
             hasBook: true,
-            loanAvailable: false, // 기본값, 이후 bookExist로 업데이트됨
+            loanAvailable: false,
             returnDate: undefined,
             latitude: lib.latitude,
             longitude: lib.longitude,
             homepage: lib.homepage || undefined,
           });
         }),
-        totalCount: libraries.length,
+        totalCount: filteredLibs.length,
       };
     } catch (error) {
       console.error("Get libraries with book error:", error);
@@ -213,15 +219,11 @@ export class BookRepositoryImpl implements BookRepository {
         pageSize: options?.pageSize || 20,
       };
 
-      // 📅 데이터 누락 방지를 위해 기본 검색 기간을 최근 3개월로 설정 (매뉴얼 권장)
-      if (!options?.startDt) {
-        const date = new Date();
-        date.setMonth(date.getMonth() - 3);
-        params.startDt = date.toISOString().split('T')[0];
-      } else {
-        params.startDt = options.startDt;
-      }
-      params.endDt = options?.endDt || new Date().toISOString().split('T')[0];
+      // 📅 데이터 확보를 위해 기간을 최근 6개월로 확장 (매뉴얼 권장 방식)
+      const date = new Date();
+      date.setMonth(date.getMonth() - 6);
+      params.startDt = date.toISOString().split('T')[0];
+      params.endDt = new Date().toISOString().split('T')[0];
 
       let endpoint = "loanItemSrch";
 
@@ -237,14 +239,14 @@ export class BookRepositoryImpl implements BookRepository {
 
       console.log(`[BookRepository] Fetching from ${endpoint} with params:`, params);
       const data = await this.fetch(endpoint, params);
-      let docs = (data as any).response?.docs || [];
+      const docs = (data as any).response?.docs || [];
 
-      // 🛡️ [Fallback 로직] 세부 지역 데이터가 0건인 경우 광역 지역으로 재시도
-      if (docs.length === 0 && params.dtl_region) {
-        console.warn(`[BookRepository] No data for dtl_region ${params.dtl_region}. Falling back to region ${params.region}...`);
-        delete params.dtl_region;
-        const fallbackData = await this.fetch(endpoint, params);
-        docs = (fallbackData as any).response?.docs || [];
+      // 🛡️ 만약 선택한 구(dtl_region) 결과가 없으면 상위 시 코드로 재시도
+      // 예: 만안구(31041) 결과 없으면 안양시(31040)로 재시도
+      if (docs.length === 0 && options?.region && options.region.length === 5 && !options.region.endsWith('0')) {
+          const cityCode = options.region.substring(0, 4) + '0';
+          console.log(`[BookRepository] Retrying with city code: ${cityCode}`);
+          return this.getPopularBooks({ ...options, region: cityCode });
       }
 
       return docs.map((book: any) => BookSchema.parse(this.mapBookData(book.doc)));
