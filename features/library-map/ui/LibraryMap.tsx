@@ -42,12 +42,18 @@ export function LibraryMap({ libraries: externalLibraries, onZoomOut }: LibraryM
       const map = new window.kakao.maps.Map(mapContainer.current, options);
       mapRef.current = map;
 
-      // 🛡️ 줌 이벤트 리스너: 멀어지면 추가 탐색 유도
+      // 🛡️ 줌 이벤트 리스너: 디바운싱 적용 (너무 잦은 API 호출 방지)
+      let zoomTimeout: NodeJS.Timeout;
       window.kakao.maps.event.addListener(map, 'zoom_changed', () => {
-        const level = map.getLevel();
-        if (level > 6 && onZoomOut) { // 줌이 6레벨 이상으로 멀어지면
-          onZoomOut();
-        }
+        if (zoomTimeout) clearTimeout(zoomTimeout);
+        
+        zoomTimeout = setTimeout(() => {
+          const level = map.getLevel();
+          if (level > 6 && onZoomOut) {
+            console.log(`[LibraryMap] Zoom level ${level} detected, triggering wide search...`);
+            onZoomOut();
+          }
+        }, 500); // 0.5초 대기 후 실행
       });
       
       setTimeout(() => { map.relayout(); }, 100);

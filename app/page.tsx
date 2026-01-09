@@ -151,10 +151,11 @@ export default function HomePage() {
 
   useEffect(() => {
     const regionCode = getRegionCode();
-    if (regionCode) {
+    if (regionCode && mounted) {
+      console.log(`[HomePage] Region changed to: ${regionCode}, loading libraries...`);
       loadLibraries(regionCode);
     }
-  }, [selectedRegion, selectedSubRegion, selectedDistrict, getRegionCode, loadLibraries]);
+  }, [selectedRegion?.code, selectedSubRegion?.code, selectedDistrict?.code, mounted, loadLibraries]); // 🛡️ 객체 대신 코드 값만 감시
 
   if (!mounted) return null;
 

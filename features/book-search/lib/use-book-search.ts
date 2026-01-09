@@ -175,6 +175,9 @@ export const useBookSearch = create<BookSearchState>((set, get) => ({
   },
 
   searchLibrariesWithBook: async (isbn: string, region: string, isWideSearch: boolean = false) => {
+    // 🛡️ [방어] 이미 같은 조건으로 로딩 중이면 중복 호출 차단
+    if (get().librariesLoading) return;
+
     console.log(`[useBookSearch] Searching libraries for ISBN: ${isbn}, Region: ${region}, Wide: ${isWideSearch}`);
     set({ librariesLoading: true });
     try {
