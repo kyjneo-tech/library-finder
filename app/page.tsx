@@ -157,7 +157,7 @@ export default function HomePage() {
       console.log(`[HomePage] Loading libraries for: ${regionCode}`);
       loadLibraries(regionCode);
     }
-  }, [selectedRegion?.code, selectedSubRegion?.code, selectedDistrict?.code, mounted]); // 🛡️ 코드 값만 감시
+  }, [selectedRegion?.code, selectedSubRegion?.code, selectedDistrict?.code, mounted, loadLibraries]); // 🛡️ loadLibraries 추가하여 크기 유지
 
   if (!mounted) return null;
 
