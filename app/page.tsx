@@ -19,6 +19,7 @@ import { LibraryMap } from "@/features/library-map/ui/LibraryMap";
 import { FamilyCategories } from "@/features/recommendations/ui/family-categories";
 import { FamilyPopularBooks } from "@/features/recommendations/ui/family-popular-books";
 import { bookRepository } from "@/entities/book/repository/book.repository.impl";
+import { checkLibraryServices } from "@/shared/lib/utils/library-services";
 import { Input } from "@/shared/ui/input";
 import { Button } from "@/shared/ui/button";
 import { cn } from "@/shared/lib/cn";
@@ -29,6 +30,7 @@ export default function HomePage() {
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [showSmartFinder, setShowSmartFinder] = useState(false);
+  const [serviceFilter, setServiceFilter] = useState<'all' | 'chaekium' | 'chaekbada'>('all');
 
   const { mode, setMode, getSearchConfig } = useSearchMode();
   const config = getSearchConfig();
@@ -253,40 +255,55 @@ export default function HomePage() {
 
         {selectedBook && (
           <div className="mx-4 mt-8 mb-6">
-            <div className="flex items-center justify-between mb-4 px-2">
-              <h2 className="text-lg font-extrabold text-gray-900 flex items-center gap-2">
-                <div className="p-1.5 bg-green-100 rounded-lg"><LibraryIcon className="w-5 h-5 text-green-600" /></div>
-                <span>빌릴 수 있는 곳</span>
-                {librariesWithBook.length > 0 && <span className="text-green-600 bg-green-50 px-2 py-0.5 rounded-full text-xs font-bold">{librariesWithBook.length}</span>}
-              </h2>
-              <Button variant="ghost" size="sm" onClick={handleDeepScan} className="text-xs font-bold text-blue-600 h-9 px-3 hover:bg-blue-50 rounded-xl border border-blue-100 shadow-sm">🔎 근처 더 찾아보기</Button>
+            <div className="flex flex-col gap-4 mb-4 px-2">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-extrabold text-gray-900 flex items-center gap-2">
+                  <div className="p-1.5 bg-green-100 rounded-lg"><LibraryIcon className="w-5 h-5 text-green-600" /></div>
+                  <span>빌릴 수 있는 곳</span>
+                </h2>
+                <Button variant="ghost" size="sm" onClick={handleDeepScan} className="text-xs font-bold text-blue-600 h-9 px-3 hover:bg-blue-50 rounded-xl border border-blue-100 shadow-sm">🔎 근처 더 찾아보기</Button>
+              </div>
+
+              <div className="flex gap-2">
+                <button onClick={() => setServiceFilter('all')} className={cn("px-3 py-1.5 rounded-full text-[11px] font-black transition-all border", serviceFilter === 'all' ? "bg-gray-900 text-white border-transparent" : "bg-white text-gray-500 border-gray-100")}>전체</button>
+                <button onClick={() => setServiceFilter('chaekium')} className={cn("px-3 py-1.5 rounded-full text-[11px] font-black transition-all border", serviceFilter === 'chaekium' ? "bg-amber-500 text-white border-transparent shadow-md shadow-amber-100" : "bg-white text-gray-500 border-gray-100")}>💳 책이음 전용</button>
+                <button onClick={() => setServiceFilter('chaekbada')} className={cn("px-3 py-1.5 rounded-full text-[11px] font-black transition-all border", serviceFilter === 'chaekbada' ? "bg-emerald-500 text-white border-transparent shadow-md shadow-emerald-100" : "bg-white text-gray-500 border-gray-100")}>🌊 책바다 전용</button>
+              </div>
             </div>
+
             {librariesLoading ? (
               <div className="space-y-4">{[1, 2, 3].map((i) => <div key={i} className="h-24 bg-white rounded-2xl animate-pulse border border-gray-100" />)}</div>
-            ) : librariesWithBook.length > 0 ? (
-              <div className="space-y-4">
-                {librariesWithBook.map((lib) => (
-                  <div key={lib.libCode} className="p-5 bg-white rounded-[1.5rem] border border-gray-100 shadow-sm hover:shadow-md transition-all">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-bold text-gray-900 text-base mb-1">{lib.libName}</h3>
-                        {lib.address && <div className="flex items-center gap-1 text-gray-500 mb-2"><MapPin className="w-3 h-3 shrink-0" /><p className="text-xs truncate font-medium">{lib.address}</p></div>}
-                        <div className="flex flex-wrap gap-2 mb-3">
-                           <span className="text-[10px] bg-purple-50 text-purple-600 px-2 py-0.5 rounded-md font-black">평일 오전 방문 권장 ✨</span>
-                           <span className="text-[10px] bg-blue-50 text-blue-600 px-2 py-0.5 rounded-md font-black">유아 자료실 보유</span>
-                        </div>
-                        {lib.homepage && <a href={lib.homepage} target="_blank" rel="noopener noreferrer" className="inline-flex items-center px-3 py-1.5 bg-gray-50 text-[11px] font-bold text-gray-600 rounded-lg border border-gray-200">도서관 홈페이지 가기</a>}
-                      </div>
-                      <div className={cn("flex flex-col items-center gap-1 px-4 py-2 rounded-2xl text-xs font-black shrink-0 border", lib.loanAvailable ? "bg-green-50 text-green-700 border-green-100" : "bg-red-50 text-red-600 border-red-100")}>
-                        {lib.loanAvailable ? <><CheckCircle2 className="w-5 h-5 mb-1" /><span>대출가능!</span></> : <><XCircle className="w-5 h-5 mb-1" /><span>대출중</span></>}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
             ) : (
-              <div className="text-center py-12 px-6 bg-white rounded-[2rem] border-2 border-dashed border-gray-200">
-                <Button onClick={handleDeepScan} className="bg-blue-500 hover:bg-blue-600 text-white rounded-xl h-12 px-8 font-bold">🔎 모든 도서관 정밀 찾기</Button>
+              <div className="space-y-4">
+                {librariesWithBook
+                  .filter(lib => {
+                    const services = checkLibraryServices(lib.libName);
+                    if (serviceFilter === 'chaekium') return services.isChaekium;
+                    if (serviceFilter === 'chaekbada') return services.isChaekbada;
+                    return true;
+                  })
+                  .map((lib) => {
+                    const services = checkLibraryServices(lib.libName);
+                    return (
+                      <div key={lib.libCode} className="p-5 bg-white rounded-[1.5rem] border border-gray-100 shadow-sm hover:shadow-md transition-all">
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-bold text-gray-900 text-base mb-1">{lib.libName}</h3>
+                            {lib.address && <div className="flex items-center gap-1 text-gray-500 mb-2"><MapPin className="w-3 h-3 shrink-0" /><p className="text-xs truncate font-medium">{lib.address}</p></div>}
+                            <div className="flex flex-wrap gap-2 mb-3">
+                               <span className="text-[10px] bg-purple-50 text-purple-600 px-2 py-0.5 rounded-md font-black">평일 오전 방문 권장 ✨</span>
+                               {services.isChaekbada && <span className="text-[10px] bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-md font-black border border-emerald-100">🌊 책바다</span>}
+                               {services.isChaekium && <span className="text-[10px] bg-amber-50 text-amber-600 px-2 py-0.5 rounded-md font-black border border-amber-100">💳 책이음</span>}
+                            </div>
+                            {lib.homepage && <a href={lib.homepage} target="_blank" rel="noopener noreferrer" className="inline-flex items-center px-3 py-1.5 bg-gray-50 text-[11px] font-bold text-gray-600 rounded-lg border border-gray-200">도서관 홈페이지 가기</a>}
+                          </div>
+                          <div className={cn("flex flex-col items-center gap-1 px-4 py-2 rounded-2xl text-xs font-black shrink-0 border", lib.loanAvailable ? "bg-green-50 text-green-700 border-green-100" : "bg-red-50 text-red-600 border-red-100")}>
+                            {lib.loanAvailable ? <><CheckCircle2 className="w-5 h-5 mb-1" /><span>대출가능!</span></> : <><XCircle className="w-5 h-5 mb-1" /><span>대출중</span></>}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
               </div>
             )}
           </div>
@@ -351,7 +368,7 @@ export default function HomePage() {
                  <div className="space-y-4 text-sm text-gray-600 leading-relaxed font-medium">
                     <p><strong className="text-purple-600">책바다 서비스:</strong> 찾는 책이 우리 동네 도서관에 없나요? 국가 상호대차 서비스인 '책바다'를 이용하면 전국의 다른 도서관 책을 우리 동네 도서관에서 받아볼 수 있어요.</p>
                     <p><strong className="text-purple-600">희망도서 신청:</strong> 도서관 홈페이지에서 희망도서를 신청하면 도서관이 직접 책을 구매해 드려요.</p>
-                    <p><strong className="text-purple-600">전자도서관 이용:</strong> 경기도사이버도서관 등 전자도서관을 이용해 보세요. 스마트폰 하나로 무료로 빌려볼 수 있습니다.</p>
+                    <p><strong className="text-purple-600">전자도서관 이용:</strong> 스마트폰 하나로 경기도사이버도서관 등 수만 권의 책을 무료로 빌려볼 수 있습니다.</p>
                  </div>
               </section>
             </div>
