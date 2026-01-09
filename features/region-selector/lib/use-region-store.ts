@@ -2,23 +2,20 @@
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { REGIONS, RegionData, SubRegion } from "@/shared/config/region-codes";
+import { REGIONS, RegionData, SubRegion, District } from "@/shared/config/region-codes";
 
 interface RegionState {
-  // 선택된 광역시/도
   selectedRegion: RegionData | null;
-  // 선택된 시/군/구
   selectedSubRegion: SubRegion | null;
-  // 드롭다운 열림 상태
+  selectedDistrict: District | null; // 🛡️ '구' 선택 상태 추가
   isOpen: boolean;
 
-  // Actions
   setRegion: (region: RegionData | null) => void;
   setSubRegion: (subRegion: SubRegion | null) => void;
+  setDistrict: (district: District | null) => void;
   setIsOpen: (isOpen: boolean) => void;
   reset: () => void;
 
-  // Computed
   getRegionCode: () => string | null;
   getDisplayName: () => string;
 }
@@ -28,14 +25,19 @@ export const useRegionStore = create<RegionState>()(
     (set, get) => ({
       selectedRegion: null,
       selectedSubRegion: null,
+      selectedDistrict: null,
       isOpen: false,
 
       setRegion: (region) => {
-        set({ selectedRegion: region, selectedSubRegion: null });
+        set({ selectedRegion: region, selectedSubRegion: null, selectedDistrict: null });
       },
 
       setSubRegion: (subRegion) => {
-        set({ selectedSubRegion: subRegion, isOpen: false });
+        set({ selectedSubRegion: subRegion, selectedDistrict: null });
+      },
+
+      setDistrict: (district) => {
+        set({ selectedDistrict: district, isOpen: false });
       },
 
       setIsOpen: (isOpen) => {
@@ -43,19 +45,23 @@ export const useRegionStore = create<RegionState>()(
       },
 
       reset: () => {
-        set({ selectedRegion: null, selectedSubRegion: null });
+        set({ selectedRegion: null, selectedSubRegion: null, selectedDistrict: null });
       },
 
       getRegionCode: () => {
-        const { selectedRegion, selectedSubRegion } = get();
-        // 세부지역이 선택되면 세부지역 코드, 아니면 광역시/도 코드
+        const { selectedDistrict, selectedSubRegion, selectedRegion } = get();
+        // 🛡️ 구 -> 시 -> 도 순으로 가장 구체적인 코드 반환
+        if (selectedDistrict) return selectedDistrict.code;
         if (selectedSubRegion) return selectedSubRegion.code;
         if (selectedRegion) return selectedRegion.code;
         return null;
       },
 
       getDisplayName: () => {
-        const { selectedRegion, selectedSubRegion } = get();
+        const { selectedRegion, selectedSubRegion, selectedDistrict } = get();
+        if (selectedDistrict && selectedSubRegion && selectedRegion) {
+          return `${selectedSubRegion.name} ${selectedDistrict.name}`;
+        }
         if (selectedSubRegion && selectedRegion) {
           return `${selectedRegion.name} ${selectedSubRegion.name}`;
         }
@@ -66,14 +72,14 @@ export const useRegionStore = create<RegionState>()(
       },
     }),
     {
-      name: "region-storage",
+      name: "region-storage-v2",
       partialize: (state) => ({
         selectedRegion: state.selectedRegion,
         selectedSubRegion: state.selectedSubRegion,
+        selectedDistrict: state.selectedDistrict,
       }),
     }
   )
 );
 
-// Helper: 모든 지역 목록
 export { REGIONS };
