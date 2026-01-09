@@ -173,56 +173,52 @@ export const useBookSearch = create<BookSearchState>((set, get) => ({
     }
   },
 
-  searchLibrariesWithBook: async (isbn: string, region: string) => {
-    console.log(`[useBookSearch] Searching libraries for ISBN: ${isbn}, Region: ${region}`);
+  searchLibrariesWithBook: async (isbn: string, region: string, isWideSearch: boolean = false) => {
+    console.log(`[useBookSearch] Searching libraries for ISBN: ${isbn}, Region: ${region}, Wide: ${isWideSearch}`);
     set({ librariesLoading: true });
     try {
-      // libSrchByBook API 호출
-      if (isbn.length !== 13) {
-        console.warn(`[useBookSearch] Warning: ISBN length is ${isbn.length}, expected 13.`);
-      }
+      // 🛡️ [확장 검색 로직] 
+      // 만약 세부 지역(5자리)인데 검색 범위 확장이 필요한 경우(책이음/책바다용) 상위 지역(2자리)으로 요청
+      const searchRegion = isWideSearch && region.length === 5 ? region.substring(0, 2) : region;
+      
+      const result = await bookRepository.getLibrariesWithBook(isbn, searchRegion);
+      console.log(`[useBookSearch] Found ${result.libraries.length} libraries.`);
 
-      const result = await bookRepository.getLibrariesWithBook(isbn, region);
-      console.log(`[useBookSearch] Found ${result.libraries.length} libraries holding the book.`);
-
-      // 🛡️ [API 절약] 모든 도서관을 다 확인하지 않고 상위 3곳만 우선 확인
-      const checkLimit = 3;
+      const checkLimit = 5; // 호출 절약을 위해 5곳 우선 확인
       const librariesWithInfo = await Promise.all(
         result.libraries.map(async (lib, idx) => {
-          // 3위까지만 자동 조회, 그 외에는 일단 대출불가(또는 확인필요) 상태로 표시
           if (idx < checkLimit) {
             try {
               const availability = await bookRepository.getBookAvailability(isbn, lib.libraryCode);
               const info = availability[0];
               return {
-                ...lib,
                 libCode: lib.libraryCode,
                 libName: lib.libraryName,
+                address: lib.address || "",
+                tel: lib.tel || "",
                 latitude: lib.latitude ? parseFloat(lib.latitude) : 0,
                 longitude: lib.longitude ? parseFloat(lib.longitude) : 0,
+                homepage: lib.homepage,
                 hasBook: info?.hasBook ?? true,
                 loanAvailable: info?.loanAvailable ?? false,
               };
-            } catch (e) { /* 에러 처리 */ }
+            } catch (e) { /* 에러 무시 */ }
           }
-          
           return {
-            ...lib,
             libCode: lib.libraryCode,
             libName: lib.libraryName,
+            address: lib.address || "",
+            tel: lib.tel || "",
             latitude: lib.latitude ? parseFloat(lib.latitude) : 0,
             longitude: lib.longitude ? parseFloat(lib.longitude) : 0,
+            homepage: lib.homepage,
             hasBook: true,
-            loanAvailable: false, // 4위부터는 '확인 필요' 상태
+            loanAvailable: false,
           };
         })
       );
 
-      // 대출 가능 도서관을 상단으로 정렬
-      const sortedLibraries = librariesWithInfo.sort((a, b) => {
-        if (a.loanAvailable === b.loanAvailable) return 0;
-        return a.loanAvailable ? -1 : 1;
-      });
+      const sortedLibraries = librariesWithInfo.sort((a, b) => (a.loanAvailable === b.loanAvailable ? 0 : a.loanAvailable ? -1 : 1));
 
       set({
         librariesWithBook: sortedLibraries,
