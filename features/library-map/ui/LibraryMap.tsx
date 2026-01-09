@@ -10,17 +10,18 @@ declare global {
 }
 
 interface LibraryMapProps {
-  libraries?: any[]; // 외부에서 주입된 도서관 목록 (BookAvailability 등)
+  libraries?: any[]; 
+  onZoomOut?: () => void; // 🛡️ 줌아웃 시 범위를 확장하기 위한 콜백
 }
 
-export function LibraryMap({ libraries: externalLibraries }: LibraryMapProps) {
+export function LibraryMap({ libraries: externalLibraries, onZoomOut }: LibraryMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const { userLocation, libraries: storeLibraries, setSelectedLibrary } = useMapStore();
   const mapRef = useRef<any>(null);
   const markersRef = useRef<any[]>([]);
   const overlaysRef = useRef<any[]>([]);
 
-  // 표시할 도서관 목록 결정 (props가 있으면 우선 사용)
+  // 🛡️ 표시할 도서관 목록 결정 (props가 있으면 우선 사용)
   const displayLibraries = externalLibraries || storeLibraries;
 
   // 지도 초기화
@@ -35,25 +36,27 @@ export function LibraryMap({ libraries: externalLibraries }: LibraryMapProps) {
           userLocation?.lat || 37.566826,
           userLocation?.lng || 126.9786567
         ),
-        level: 5,
+        level: 4, // 🛡️ 초기 줌 레벨을 동네 단위(4)로 설정
       };
 
       const map = new window.kakao.maps.Map(mapContainer.current, options);
       mapRef.current = map;
+
+      // 🛡️ 줌 이벤트 리스너: 멀어지면 추가 탐색 유도
+      window.kakao.maps.event.addListener(map, 'zoom_changed', () => {
+        const level = map.getLevel();
+        if (level > 6 && onZoomOut) { // 줌이 6레벨 이상으로 멀어지면
+          onZoomOut();
+        }
+      });
       
-      // 맵이 로드된 후 즉시 relayout 호출하여 사이즈 보정
-      setTimeout(() => {
-        map.relayout();
-      }, 100);
+      setTimeout(() => { map.relayout(); }, 100);
     };
 
-    // 🛡️ 카카오 객체 존재 여부 체크 후 load 호출
     if (window.kakao && window.kakao.maps) {
       window.kakao.maps.load(initMap);
-    } else {
-      console.warn("카카오맵 SDK가 아직 로드되지 않았습니다.");
     }
-  }, [userLocation]);
+  }, [userLocation, onZoomOut]);
 
   // 화면 크기 변경 시 relayout
   useEffect(() => {

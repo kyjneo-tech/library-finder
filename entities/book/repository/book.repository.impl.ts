@@ -121,13 +121,27 @@ export class BookRepositoryImpl implements BookRepository {
 
       if (regionCode) {
         params.region = regionCode.substring(0, 2);
-        params.dtl_region = regionCode; // 🛡️ UI에서 보낸 정확한 구 코드를 사용
+        // 5자리면 구/군 코드, 2자리면 광역시도만
+        if (regionCode.length >= 5) {
+          params.dtl_region = regionCode;
+        }
       } else {
         params.region = "11";
       }
 
-      const data = await this.fetch("libSrchByBook", params);
-      const libraries = (data as any).response?.libs || [];
+      console.log(`[getLibrariesWithBook] 1차 시도: region=${params.region}, dtl_region=${params.dtl_region}`);
+      let data = await this.fetch("libSrchByBook", params);
+      let libraries = (data as any).response?.libs || [];
+
+      // 🛡️ 계층적 폴백: 구 단위 결과 없으면 시/도 전체로 확장
+      if (libraries.length === 0 && params.dtl_region) {
+        console.log(`[getLibrariesWithBook] 결과 없음 → 상위 지역으로 확장 (dtl_region 제거)`);
+        delete params.dtl_region;
+        data = await this.fetch("libSrchByBook", params);
+        libraries = (data as any).response?.libs || [];
+      }
+
+      console.log(`[getLibrariesWithBook] 최종 결과: ${libraries.length}개 도서관`);
 
       return {
         libraries: libraries.map((libWrapper: any) => {
@@ -141,11 +155,14 @@ export class BookRepositoryImpl implements BookRepository {
             latitude: lib.latitude,
             longitude: lib.longitude,
             homepage: lib.homepage || undefined,
+            address: lib.address || undefined,
+            tel: lib.tel || undefined,
           });
         }),
         totalCount: libraries.length,
       };
     } catch (error) {
+      console.error("[getLibrariesWithBook] 오류:", error);
       return { libraries: [], totalCount: 0 };
     }
   }
@@ -294,28 +311,43 @@ export class BookRepositoryImpl implements BookRepository {
         pageSize: 150, 
       });
 
-      const checkPromises = allLibraries.map(async (lib) => {
-        try {
-          const availability = await this.getBookAvailability(isbn, lib.libCode);
-          if (availability.length > 0 && availability[0].hasBook) {
-            return {
-              ...availability[0],
-              libraryName: lib.libName,
-              latitude: lib.latitude ? String(lib.latitude) : undefined,
-              longitude: lib.longitude ? String(lib.longitude) : undefined,
-              homepage: lib.homepage || undefined,
-              address: lib.address || undefined,
-              tel: lib.tel || undefined,
-            };
+      // 🛡️ API 호출 최적화: 최대 30개 도서관만 체크
+      const MAX_CHECKS = 30;
+      const BATCH_SIZE = 5; // 동시에 5개씩만 호출
+      
+      const limitedLibraries = allLibraries.slice(0, MAX_CHECKS);
+      console.log(`[deepScanLibraries] ${allLibraries.length}개 중 ${limitedLibraries.length}개 도서관 스캔`);
+      
+      const validResults: BookAvailability[] = [];
+      
+      // 배치 처리: 동시 호출 수 제한
+      for (let i = 0; i < limitedLibraries.length; i += BATCH_SIZE) {
+        const batch = limitedLibraries.slice(i, i + BATCH_SIZE);
+        
+        const batchPromises = batch.map(async (lib) => {
+          try {
+            const availability = await this.getBookAvailability(isbn, lib.libCode);
+            if (availability.length > 0 && availability[0].hasBook) {
+              return {
+                ...availability[0],
+                libraryName: lib.libName,
+                latitude: lib.latitude ? String(lib.latitude) : undefined,
+                longitude: lib.longitude ? String(lib.longitude) : undefined,
+                homepage: lib.homepage || undefined,
+                address: lib.address || undefined,
+                tel: lib.tel || undefined,
+              };
+            }
+            return null;
+          } catch (e) {
+            return null;
           }
-          return null;
-        } catch (e) {
-          return null;
-        }
-      });
-
-      const results = await Promise.all(checkPromises);
-      const validResults = results.filter((r) => r !== null) as BookAvailability[];
+        });
+        
+        const batchResults = await Promise.all(batchPromises);
+        const filtered = batchResults.filter((r) => r !== null);
+        validResults.push(...(filtered as BookAvailability[]));
+      }
 
       return { libraries: validResults, totalCount: validResults.length };
     } catch (error) {

@@ -32,7 +32,8 @@ interface BookSearchState {
   setFilters: (filters: Partial<BookSearchFilters>) => void;
   clearSearch: () => void;
   selectBook: (book: Book) => Promise<void>;
-  searchLibrariesWithBook: (isbn: string, region: string) => Promise<void>;
+  searchLibrariesWithBook: (isbn: string, region: string, isWideSearch?: boolean) => Promise<void>;
+  searchLibrariesNationwide: (isbn: string) => Promise<void>;
   deepScan: (isbn: string, region: string) => Promise<void>;
   clearLibraries: () => void;
   searchByKdc: (kdc: string, keyword: string) => Promise<void>;
@@ -266,6 +267,70 @@ export const useBookSearch = create<BookSearchState>((set, get) => ({
         error: error instanceof Error ? error.message : "주제별 검색 실패",
         loading: false,
       });
+    }
+  },
+
+  // 🌍 전국 검색 (책이음/책바다 서비스용)
+  // 🛡️ 캐시: 동일 ISBN 5분간 캐싱
+  searchLibrariesNationwide: async (isbn: string) => {
+    console.log(`[useBookSearch] 전국 검색 시작: ISBN ${isbn}`);
+    
+    // 캐시 키 생성
+    const cacheKey = `nationwide_${isbn}`;
+    const cached = (window as any).__nationwideCache?.[cacheKey];
+    
+    if (cached && Date.now() < cached.expiry) {
+      console.log(`[useBookSearch] 캐시 히트! ${cached.data.length}개 도서관`);
+      set({ librariesWithBook: cached.data, librariesLoading: false });
+      return;
+    }
+    
+    set({ librariesLoading: true });
+    try {
+      // 17개 광역시도 코드
+      const regionCodes = ['11', '21', '22', '23', '24', '25', '26', '31', '32', '33', '34', '35', '36', '37', '38', '39', '50'];
+      
+      // 병렬로 모든 지역 검색 (속도 최적화)
+      const results = await Promise.allSettled(
+        regionCodes.map(code => bookRepository.getLibrariesWithBook(isbn, code))
+      );
+      
+      // 성공한 결과만 병합
+      const allLibraries = results
+        .filter((r): r is PromiseFulfilledResult<{ libraries: any[]; totalCount: number }> => r.status === 'fulfilled')
+        .flatMap(r => r.value.libraries);
+      
+      console.log(`[useBookSearch] 전국 검색 완료: ${allLibraries.length}개 도서관 발견`);
+
+      // LibraryWithBookInfo 형태로 변환
+      const librariesWithInfo: LibraryWithBookInfo[] = allLibraries.map(lib => ({
+        libCode: lib.libraryCode,
+        libName: lib.libraryName,
+        address: lib.address || "",
+        tel: lib.tel || "",
+        latitude: lib.latitude ? parseFloat(lib.latitude) : 0,
+        longitude: lib.longitude ? parseFloat(lib.longitude) : 0,
+        homepage: lib.homepage,
+        hasBook: true,
+        loanAvailable: false, // 전국 검색은 대출 가능 여부 미확인 (API 호출 최소화)
+      }));
+
+      // 캐시 저장 (5분)
+      if (typeof window !== 'undefined') {
+        (window as any).__nationwideCache = (window as any).__nationwideCache || {};
+        (window as any).__nationwideCache[cacheKey] = {
+          data: librariesWithInfo,
+          expiry: Date.now() + 300000 // 5분
+        };
+      }
+
+      set({
+        librariesWithBook: librariesWithInfo,
+        librariesLoading: false,
+      });
+    } catch (error) {
+      console.error("전국 검색 오류:", error);
+      set({ librariesLoading: false });
     }
   },
 

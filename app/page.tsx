@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Search, MapPin, BookOpen, Library as LibraryIcon, CheckCircle2, XCircle, X, Info, TrendingUp, ChevronRight } from "lucide-react";
+import { useEffect, useState, useMemo } from "react";
+import { Search, MapPin, BookOpen, Library as LibraryIcon, CheckCircle2, XCircle, X, HelpCircle, ChevronRight, TrendingUp } from "lucide-react";
 import { RegionSelector } from "@/features/region-selector/ui/region-selector";
 import { useRegionStore } from "@/features/region-selector/lib/use-region-store";
 import { useBookSearch } from "@/features/book-search/lib/use-book-search";
@@ -49,7 +49,7 @@ export default function HomePage() {
     setMounted(true);
   }, []);
 
-  const { getRegionCode, selectedRegion } = useRegionStore();
+  const { getRegionCode, selectedRegion, selectedSubRegion, selectedDistrict } = useRegionStore();
   const {
     books,
     loading,
@@ -139,12 +139,22 @@ export default function HomePage() {
     }
   };
 
+  // 🛡️ 필터링된 도서관 목록 계산
+  const filteredLibraries = useMemo(() => {
+    return librariesWithBook.filter(lib => {
+      const services = checkLibraryServices(lib.libName);
+      if (serviceFilter === 'chaekium') return services.isChaekium;
+      if (serviceFilter === 'chaekbada') return services.isChaekbada;
+      return true;
+    });
+  }, [librariesWithBook, serviceFilter]);
+
   useEffect(() => {
     const regionCode = getRegionCode();
     if (regionCode) {
       loadLibraries(regionCode);
     }
-  }, [selectedRegion, getRegionCode, loadLibraries]);
+  }, [selectedRegion, selectedSubRegion, selectedDistrict, getRegionCode, loadLibraries]);
 
   if (!mounted) return null;
 
@@ -242,7 +252,16 @@ export default function HomePage() {
         )}
 
         <div className="mx-4 mt-6 h-[350px] rounded-[2rem] overflow-hidden border-4 border-white shadow-2xl bg-gray-100 relative">
-          <LibraryMap libraries={selectedBook ? librariesWithBook : undefined} />
+          <LibraryMap 
+            libraries={selectedBook ? filteredLibraries : undefined} 
+            onZoomOut={async () => {
+                const regionCode = getRegionCode();
+                const targetIsbn = selectedBook?.isbn13 || selectedBook?.isbn;
+                if (targetIsbn && regionCode && regionCode.length === 5) {
+                    await searchLibrariesWithBook(targetIsbn, regionCode, true);
+                }
+            }}
+          />
           {!selectedBook && (
             <div className="absolute inset-0 pointer-events-none bg-gradient-to-t from-black/20 to-transparent flex items-end p-6">
               <div className="bg-white/90 backdrop-blur px-4 py-2 rounded-xl flex items-center gap-2 shadow-lg">
@@ -264,20 +283,30 @@ export default function HomePage() {
                 </h2>
                 <Button variant="ghost" size="sm" onClick={async () => {
                     const regionCode = getRegionCode();
-                    if (regionCode && regionCode.length === 5) {
-                        const wideCode = regionCode.substring(0, 2);
-                        const targetIsbn = selectedBook.isbn13 || selectedBook.isbn;
-                        if (targetIsbn) await searchLibrariesWithBook(targetIsbn, wideCode);
-                    } else {
-                        await handleDeepScan();
-                    }
+                    const targetIsbn = selectedBook.isbn13 || selectedBook.isbn;
+                    if (targetIsbn && regionCode) await searchLibrariesWithBook(targetIsbn, regionCode, true);
                   }} className="text-xs font-black text-blue-600 h-10 px-4 hover:bg-blue-50 rounded-2xl border border-blue-100 shadow-sm">📍 더 넓은 지역 찾기</Button>
               </div>
 
               <div className="flex bg-gray-100/80 p-1.5 rounded-[1.5rem] gap-1">
-                <button onClick={() => setServiceFilter('all')} className={cn("flex-1 py-3 rounded-xl text-xs font-black transition-all", serviceFilter === 'all' ? "bg-white text-gray-900 shadow-md" : "text-gray-500")}>내 주변</button>
-                <button onClick={() => setServiceFilter('chaekium')} className={cn("flex-1 py-3 rounded-xl text-xs font-black transition-all", serviceFilter === 'chaekium' ? "bg-amber-500 text-white shadow-lg shadow-amber-100" : "text-gray-500")}>💳 통합회원증</button>
-                <button onClick={() => setServiceFilter('chaekbada')} className={cn("flex-1 py-3 rounded-xl text-xs font-black transition-all", serviceFilter === 'chaekbada' ? "bg-emerald-500 text-white shadow-lg shadow-emerald-100" : "text-gray-500")}>🌊 택배배송</button>
+                <button onClick={() => {
+                    setServiceFilter('all');
+                    const regionCode = getRegionCode();
+                    const targetIsbn = selectedBook.isbn13 || selectedBook.isbn;
+                    if (targetIsbn && regionCode) searchLibrariesWithBook(targetIsbn, regionCode, false);
+                  }} className={cn("flex-1 py-3 rounded-xl text-xs font-black transition-all", serviceFilter === 'all' ? "bg-white text-gray-900 shadow-md" : "text-gray-500")}>내 주변</button>
+                <button onClick={() => {
+                    setServiceFilter('chaekium');
+                    const regionCode = getRegionCode();
+                    const targetIsbn = selectedBook.isbn13 || selectedBook.isbn;
+                    if (targetIsbn && regionCode) searchLibrariesWithBook(targetIsbn, regionCode, true);
+                  }} className={cn("flex-1 py-3 rounded-xl text-xs font-black transition-all", serviceFilter === 'chaekium' ? "bg-amber-500 text-white shadow-lg shadow-amber-100" : "text-gray-500")}>💳 통합회원증</button>
+                <button onClick={() => {
+                    setServiceFilter('chaekbada');
+                    const regionCode = getRegionCode();
+                    const targetIsbn = selectedBook.isbn13 || selectedBook.isbn;
+                    if (targetIsbn && regionCode) searchLibrariesWithBook(targetIsbn, regionCode, true);
+                  }} className={cn("flex-1 py-3 rounded-xl text-xs font-black transition-all", serviceFilter === 'chaekbada' ? "bg-emerald-500 text-white shadow-lg shadow-emerald-100" : "text-gray-500")}>🌊 택배배송</button>
               </div>
             </div>
 
@@ -285,14 +314,7 @@ export default function HomePage() {
               <div className="space-y-4">{[1, 2, 3].map((i) => <div key={i} className="h-24 bg-white rounded-3xl animate-pulse border border-gray-100" />)}</div>
             ) : (
               <div className="space-y-4">
-                {librariesWithBook
-                  .filter(lib => {
-                    const services = checkLibraryServices(lib.libName);
-                    if (serviceFilter === 'chaekium') return services.isChaekium;
-                    if (serviceFilter === 'chaekbada') return services.isChaekbada;
-                    return true;
-                  })
-                  .map((lib) => {
+                {filteredLibraries.map((lib) => {
                     const services = checkLibraryServices(lib.libName);
                     return (
                       <div key={lib.libCode} className="p-6 bg-white rounded-[2rem] border border-gray-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all group">
