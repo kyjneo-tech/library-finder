@@ -161,8 +161,9 @@ export class BookRepositoryImpl implements BookRepository {
         pageSize: options?.pageSize || 20,
       };
 
+      // 📅 1차 시도: 최근 6개월 데이터
       const date = new Date();
-      date.setMonth(date.getMonth() - 6); // 📅 기간 6개월 확장
+      date.setMonth(date.getMonth() - 6);
       params.startDt = date.toISOString().split('T')[0];
       params.endDt = new Date().toISOString().split('T')[0];
 
@@ -171,29 +172,32 @@ export class BookRepositoryImpl implements BookRepository {
       if (options?.region) {
         endpoint = "loanItemSrchByLib"; 
         params.region = options.region.substring(0, 2);
-        params.dtl_region = options.region; // 🛡️ 정확한 구 코드 매칭
+        params.dtl_region = options.region;
       }
 
-      // 🛡️ 아동용 필터가 명시적으로 들어온 경우 파라미터 고정
-      if (options?.addCode === '7') {
-          params.addCode = '7';
-      }
+      console.log(`[BookRepository] 1st Attempt: ${endpoint}, Region: ${params.dtl_region}`);
+      let responseData: any = await this.fetch(endpoint, params);
+      let docs = responseData?.response?.docs || [];
 
-      console.log(`[BookRepository] Fetching from ${endpoint}:`, params.dtl_region || "Nationwide");
-      const data = await this.fetch(endpoint, params);
-      let docs = (data as any).response?.docs || [];
-
-      // 🛡️ [혁신] 데이터 절벽 해결 (의령군 등 결과 0건인 경우)
-      if (docs.length === 0 && params.dtl_region) {
-          console.warn(`[BookRepository] ${params.dtl_region} has zero data. Falling back to province ${params.region}`);
-          // 세부 지역 코드를 비우고 상위 지역(Province)으로 재시도
+      // 🛡️ [혁신 로직] 1차 결과가 없으면 자동으로 조건 완화하여 재시도
+      if (docs.length === 0 && options?.region) {
+          console.warn(`[BookRepository] No data for ${options.region}. Trying 2nd Attempt: Expanding area and time...`);
+          
+          // 기간을 1년전으로 확장
+          const longDate = new Date();
+          longDate.setFullYear(longDate.getFullYear() - 1);
+          params.startDt = longDate.toISOString().split('T')[0];
+          
+          // 세부 지역(구/군) 코드를 제거하고 시/도 전체로 확장
           delete params.dtl_region;
-          const fallbackData = await this.fetch(endpoint, params);
-          docs = (fallbackData as any).response?.docs || [];
+          
+          const fallbackData: any = await this.fetch(endpoint, params);
+          docs = fallbackData?.response?.docs || [];
       }
 
       return docs.map((book: any) => BookSchema.parse(this.mapBookData(book.doc)));
     } catch (error) {
+      console.error("[BookRepository] Get popular books failed:", error);
       return [];
     }
   }

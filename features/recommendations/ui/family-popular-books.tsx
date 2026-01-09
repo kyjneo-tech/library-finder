@@ -15,7 +15,7 @@ export function FamilyPopularBooks({ onBookSelect }: FamilyPopularBooksProps) {
   const [books, setBooks] = useState<Book[]>([]);
   const [loading, setLoading] = useState(false);
   const { fetchFamilyPopularBooks } = useRecommendationsStore();
-  const { selectedRegion, selectedSubRegion } = useRegionStore();
+  const { selectedRegion, selectedSubRegion, selectedDistrict } = useRegionStore();
 
   useEffect(() => {
     const loadBooks = async () => {
@@ -41,8 +41,10 @@ export function FamilyPopularBooks({ onBookSelect }: FamilyPopularBooksProps) {
 
   if (books.length === 0) return null;
 
-  // 표시할 지역 이름 (세부 지역이 있으면 세부 지역명 우선)
-  const regionName = selectedSubRegion?.name || selectedRegion?.name;
+  const regionName = selectedDistrict?.name || selectedSubRegion?.name || selectedRegion?.name;
+  
+  // 데이터가 실제 구/군 단위인지 아니면 광역 단위인지 판별 (books의 대출 횟수 등을 기반으로 유추 가능하나 UI상으론 친절한 안내 위주)
+  const isSpecificArea = selectedDistrict || (selectedSubRegion && !selectedSubRegion.districts);
 
   return (
     <section className="mx-4 mt-10 mb-20">
@@ -54,9 +56,9 @@ export function FamilyPopularBooks({ onBookSelect }: FamilyPopularBooksProps) {
             </h3>
             <span className="text-[10px] font-bold text-purple-600 bg-purple-50 px-2 py-1 rounded-lg uppercase tracking-wider">Verified</span>
         </div>
-        <p className="text-[11px] text-gray-400 mt-1 font-medium">
+        <p className="text-[11px] text-gray-400 mt-1 font-medium leading-relaxed">
             {regionName 
-                ? `${regionName} 도서관들에서 실제로 가장 활발히 대여되고 있는 책들이에요.` 
+                ? `${regionName}의 최신 도서 데이터를 분석했습니다. (해당 군/구 데이터가 부족할 경우 인근 광역 데이터를 참고합니다.)` 
                 : "전국 도서관 대출 데이터를 기반으로 검증된 도서들이에요."}
         </p>
       </div>
