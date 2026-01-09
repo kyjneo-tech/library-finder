@@ -150,12 +150,14 @@ export default function HomePage() {
   }, [librariesWithBook, serviceFilter]);
 
   useEffect(() => {
+    // 🛡️ 지역 코드가 완전히 확정되었을 때만 딱 한 번 실행
     const regionCode = getRegionCode();
     if (regionCode && mounted) {
-      console.log(`[HomePage] Region changed to: ${regionCode}, loading libraries...`);
+      // 깜빡임 방지를 위해 로딩 상태 확인 후 로드
+      console.log(`[HomePage] Loading libraries for: ${regionCode}`);
       loadLibraries(regionCode);
     }
-  }, [selectedRegion?.code, selectedSubRegion?.code, selectedDistrict?.code, mounted, loadLibraries]); // 🛡️ 객체 대신 코드 값만 감시
+  }, [selectedRegion?.code, selectedSubRegion?.code, selectedDistrict?.code, mounted]); // 🛡️ 코드 값만 감시
 
   if (!mounted) return null;
 
