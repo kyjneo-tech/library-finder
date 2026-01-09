@@ -1,6 +1,14 @@
 import { NextResponse } from "next/server";
 
 export async function GET(request: Request) {
+  // 🛡️ 보안 체크: 내 사이트에서 온 요청인지 확인
+  const referer = request.headers.get("referer");
+  const host = request.headers.get("host");
+  
+  if (process.env.NODE_ENV === "production" && referer && host && !referer.includes(host)) {
+    return NextResponse.json({ error: "Unauthorized access" }, { status: 403 });
+  }
+
   const { searchParams } = new URL(request.url);
   const query = searchParams.get("query");
   const display = searchParams.get("display") || "3";
