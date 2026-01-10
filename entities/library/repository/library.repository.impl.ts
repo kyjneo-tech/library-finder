@@ -1,6 +1,7 @@
 import { API_CONFIG } from "@/shared/config/constants";
 import { Library, LibrarySearchFilters, LibraryStats, LibrarySchema } from "../model/types";
 import { LibraryRepository } from "./library.repository";
+import { findSubRegionByCode } from "@/shared/config/region-codes";
 
 export class LibraryRepositoryImpl implements LibraryRepository {
   // private readonly baseUrl = API_CONFIG.LIBRARY_API_BASE; // 이제 사용 안 함
@@ -41,16 +42,78 @@ export class LibraryRepositoryImpl implements LibraryRepository {
     totalCount: number;
   }> {
     try {
-      const data = await this.fetch("libSrch", {
+      // 🛡️ [스마트 필터링] API의 dtl_region 필터링 오류 해결을 위한 클라이언트 사이드 필터링
+      let targetDistrictName: string | undefined;
+      const apiParams = {
         region: filters?.region,
         dtl_region: filters?.dtl_region,
         libraryType: filters?.libraryType,
         pageNo: filters?.pageNo || 1,
         pageSize: filters?.pageSize || 100,
-      });
+      };
 
-      const libraries = (data as any).response?.libs || [];
-      const totalCount = (data as any).response?.numFound || 0;
+      if (filters?.dtl_region && filters.dtl_region.length === 5) {
+        // 1. 지역명 찾기 (예: "33012" -> "서원구")
+        const regionInfo = findSubRegionByCode(filters.dtl_region);
+        if (regionInfo) {
+          // 구(District) 정보가 있으면 구 이름, 없으면 시/군(SubRegion) 이름 사용
+          targetDistrictName = regionInfo.district?.name || regionInfo.subRegion.name;
+          
+          console.log(`[LibraryRepository] 스마트 필터링 활성화: ${targetDistrictName} (코드: ${filters.dtl_region})`);
+
+          // 2. API에는 상위 지역(Region)으로만 요청 (dtl_region 제거)
+          // 넉넉하게 500개 요청하여 해당 지역 도서관 모두 확보
+          apiParams.region = filters.dtl_region.substring(0, 2);
+          delete apiParams.dtl_region;
+          apiParams.pageSize = 500; 
+        }
+      }
+
+      const data = await this.fetch("libSrch", apiParams);
+
+      let libraries = (data as any).response?.libs || [];
+      let totalCount = (data as any).response?.numFound || 0;
+
+      // 3. 주소 기반 정밀 필터링 (2단계: 구 -> 시/군)
+      if (targetDistrictName && libraries.length > 0) {
+        // 1차: 구(District) 이름으로 필터링
+        let filteredLibs = libraries.filter((lib: any) => {
+           const addr = lib.lib.address || "";
+           return addr.includes(targetDistrictName!);
+        });
+
+        if (filteredLibs.length > 0) {
+           console.log(`[LibraryRepository] ${targetDistrictName} 도서관 ${filteredLibs.length}개 필터링 성공`);
+           libraries = filteredLibs;
+           totalCount = filteredLibs.length;
+        } else {
+           // 2차: 구 단위 검색 실패 시, 시/군(SubRegion) 단위로 확장 시도
+           // 예: "청원구" 데이터가 없으면 "청주시" 전체라도 보여줌 (충북 전체보다는 나음)
+           const regionInfo = findSubRegionByCode(filters?.dtl_region!);
+           const subRegionName = regionInfo?.subRegion.name;
+           
+           if (subRegionName && subRegionName !== targetDistrictName) {
+               console.log(`[LibraryRepository] ${targetDistrictName} 결과 없음. ${subRegionName} 단위로 확장 시도.`);
+               filteredLibs = libraries.filter((lib: any) => {
+                   const addr = lib.lib.address || "";
+                   return addr.includes(subRegionName);
+               });
+               
+               if (filteredLibs.length > 0) {
+                   libraries = filteredLibs;
+                   totalCount = filteredLibs.length;
+               } else {
+                   // 시/군 단위도 없으면 빈 배열 (Fallback 제거)
+                   libraries = [];
+                   totalCount = 0;
+               }
+           } else {
+               // 상위 지역이 없거나 같으면 빈 배열
+               libraries = [];
+               totalCount = 0;
+           }
+        }
+      }
 
       return {
         libraries: libraries.map((lib: any) =>

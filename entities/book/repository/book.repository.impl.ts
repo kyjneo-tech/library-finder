@@ -7,15 +7,15 @@ import {
   BookSchema,
   BookAvailabilitySchema,
 } from "../model/types";
-
 import { BookRepository } from "./book.repository";
-import { libraryRepository } from "../../library/repository/library.repository.impl";
+import { libraryRepository } from "@/entities/library/repository/library.repository.impl";
+import { findSubRegionByCode } from "@/shared/config/region-codes";
 
 export class BookRepositoryImpl implements BookRepository {
 
   private async fetch<T>(endpoint: string, params: Record<string, any> = {}): Promise<T> {
     const url = new URL(`/api/libraries/${endpoint}`, typeof window !== 'undefined' ? window.location.origin : process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000');
-
+    // ... (fetch implementation remains the same)
     Object.entries(params).forEach(([key, value]) => {
       if (value !== undefined && value !== null) {
         url.searchParams.append(key, String(value));
@@ -30,6 +30,7 @@ export class BookRepositoryImpl implements BookRepository {
     return response.json();
   }
 
+  // ... (searchBooks method remains the same)
   async searchBooks(filters: BookSearchFilters): Promise<{ books: Book[]; totalCount: number }> {
     try {
       const query = filters.query || "";
@@ -61,6 +62,7 @@ export class BookRepositoryImpl implements BookRepository {
   }
 
   private async searchViaNaver(query: string, pageNo: number, pageSize: number) {
+    // ... (implementation remains the same)
     const response = await fetch(`/api/naver/search?query=${encodeURIComponent(query)}&start=${pageNo}&display=${pageSize}`);
     if (!response.ok) return { books: [], totalCount: 0 };
     
@@ -80,6 +82,7 @@ export class BookRepositoryImpl implements BookRepository {
     return { books, totalCount: data.total || 0 };
   }
 
+  // ... (getBookDetail, getBookAvailability methods remain the same)
   async getBookDetail(isbn: string): Promise<Book | null> {
     try {
       const data = await this.fetch("srchDtlList", { isbn13: isbn, loaninfoYN: "Y" });
@@ -118,30 +121,69 @@ export class BookRepositoryImpl implements BookRepository {
   }> {
     try {
       const params: any = { isbn, pageSize: 500 }; 
+      let targetDistrictName: string | undefined;
 
       if (regionCode) {
-        params.region = regionCode.substring(0, 2);
-        // 5자리면 구/군 코드, 2자리면 광역시도만
+        // 5자리면 구/군 코드 -> 스마트 필터링 준비
         if (regionCode.length >= 5) {
-          params.dtl_region = regionCode;
+            const regionInfo = findSubRegionByCode(regionCode);
+            if (regionInfo) {
+                targetDistrictName = regionInfo.district?.name || regionInfo.subRegion.name;
+                // API에는 상위 지역으로 요청하여 전체 확보
+                params.region = regionCode.substring(0, 2);
+                // dtl_region은 보내지 않음 (API 오류 방지)
+                console.log(`[getLibrariesWithBook] 스마트 필터링 준비: ${targetDistrictName} (상위지역: ${params.region})`);
+            } else {
+                params.region = regionCode.substring(0, 2);
+                params.dtl_region = regionCode;
+            }
+        } else {
+            params.region = regionCode;
         }
       } else {
         params.region = "11";
       }
 
-      console.log(`[getLibrariesWithBook] 1차 시도: region=${params.region}, dtl_region=${params.dtl_region}`);
+      console.log(`[getLibrariesWithBook] API 요청: region=${params.region}, dtl_region=${params.dtl_region || 'N/A'}`);
       let data = await this.fetch("libSrchByBook", params);
       let libraries = (data as any).response?.libs || [];
 
-      // 🛡️ 계층적 폴백: 구 단위 결과 없으면 시/도 전체로 확장
-      if (libraries.length === 0 && params.dtl_region) {
-        console.log(`[getLibrariesWithBook] 결과 없음 → 상위 지역으로 확장 (dtl_region 제거)`);
-        delete params.dtl_region;
-        data = await this.fetch("libSrchByBook", params);
-        libraries = (data as any).response?.libs || [];
+      // 🛡️ [스마트 필터링] 주소 기반 필터링 (2단계)
+      if (targetDistrictName && libraries.length > 0) {
+          // 1차: 구(District) 이름으로 필터링
+          let filtered = libraries.filter((item: any) => {
+              const addr = item.lib.address || "";
+              return addr.includes(targetDistrictName!);
+          });
+          
+          if (filtered.length > 0) {
+              console.log(`[getLibrariesWithBook] ${targetDistrictName} 도서관 ${filtered.length}개 발견 (필터링 성공)`);
+              libraries = filtered;
+          } else {
+              // 2차: 구 단위 실패 시 시/군 단위로 확장
+              const regionInfo = findSubRegionByCode(regionCode!);
+              const subRegionName = regionInfo?.subRegion.name;
+              
+              if (subRegionName && subRegionName !== targetDistrictName) {
+                  console.log(`[getLibrariesWithBook] ${targetDistrictName} 결과 없음. ${subRegionName} 단위로 확장.`);
+                  filtered = libraries.filter((item: any) => {
+                      const addr = item.lib.address || "";
+                      return addr.includes(subRegionName);
+                  });
+                  
+                  if (filtered.length > 0) {
+                      libraries = filtered;
+                  } else {
+                      libraries = []; // 2차도 실패하면 빈 결과
+                  }
+              } else {
+                  libraries = []; // 확장 불가하면 빈 결과
+              }
+          }
+      } else if (libraries.length === 0 && params.region) {
+          // 아예 상위 지역 결과도 없는 경우
+           console.log(`[getLibrariesWithBook] 결과 없음.`);
       }
-
-      console.log(`[getLibrariesWithBook] 최종 결과: ${libraries.length}개 도서관`);
 
       return {
         libraries: libraries.map((libWrapper: any) => {
@@ -178,38 +220,49 @@ export class BookRepositoryImpl implements BookRepository {
         pageSize: options?.pageSize || 20,
       };
 
-      // 📅 1차 시도: 최근 6개월 데이터
+      // 📅 기간 설정: 최근 6개월 데이터
       const date = new Date();
       date.setMonth(date.getMonth() - 6);
       params.startDt = date.toISOString().split('T')[0];
       params.endDt = new Date().toISOString().split('T')[0];
 
       let endpoint = "loanItemSrch";
+      let isRegionalSearch = false;
 
       if (options?.region) {
-        endpoint = "loanItemSrchByLib"; 
+        endpoint = "loanItemSrchByLib";
         params.region = options.region.substring(0, 2);
-        params.dtl_region = options.region;
+        // 🛡️ dtl_region은 API가 제대로 처리하지 못하므로 제거
+        // params.dtl_region = options.region;
+        isRegionalSearch = true;
       }
 
-      console.log(`[BookRepository] 1st Attempt: ${endpoint}, Region: ${params.dtl_region}`);
+      console.log(`[BookRepository] Regional search: ${endpoint}, Region: ${params.region || 'N/A'}`);
       let responseData: any = await this.fetch(endpoint, params);
       let docs = responseData?.response?.docs || [];
 
-      // 🛡️ [혁신 로직] 1차 결과가 없으면 자동으로 조건 완화하여 재시도
-      if (docs.length === 0 && options?.region) {
-          console.warn(`[BookRepository] No data for ${options.region}. Trying 2nd Attempt: Expanding area and time...`);
-          
-          // 기간을 1년전으로 확장
-          const longDate = new Date();
-          longDate.setFullYear(longDate.getFullYear() - 1);
-          params.startDt = longDate.toISOString().split('T')[0];
-          
-          // 세부 지역(구/군) 코드를 제거하고 시/도 전체로 확장
-          delete params.dtl_region;
-          
-          const fallbackData: any = await this.fetch(endpoint, params);
-          docs = fallbackData?.response?.docs || [];
+      // 🛡️ [자동 폴백] 지역 데이터가 없으면 전국 데이터로 폴백
+      if (docs.length === 0 && isRegionalSearch) {
+        console.log(`[BookRepository] No regional data found. Falling back to national data...`);
+
+        // 전국 검색으로 재시도
+        const nationalParams = {
+          age: options?.age,
+          gender: options?.gender,
+          addCode: options?.addCode,
+          kdc: options?.kdc,
+          pageNo: options?.pageNo || 1,
+          pageSize: options?.pageSize || 20,
+          startDt: params.startDt,
+          endDt: params.endDt,
+        };
+
+        responseData = await this.fetch("loanItemSrch", nationalParams);
+        docs = responseData?.response?.docs || [];
+
+        if (docs.length > 0) {
+          console.log(`[BookRepository] ✅ Fallback successful: ${docs.length} national books found`);
+        }
       }
 
       return docs.map((book: any) => BookSchema.parse(this.mapBookData(book.doc)));

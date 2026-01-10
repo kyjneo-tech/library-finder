@@ -16,7 +16,7 @@ export function LocalPopularBooks({ onBookSelect }: LocalPopularBooksProps) {
   const [loading, setLoading] = useState(false);
   const [isFallback, setIsFallback] = useState(false);
 
-  const { getRegionCode, getDisplayName } = useRegionStore();
+  const { getRegionCode, getDisplayName, selectedRegion, selectedSubRegion, selectedDistrict } = useRegionStore();
   const { fetchLocalKidsPopularBooks } = useRecommendationsStore(); // ✅ 키즈 전용 메서드 사용
 
   const fetchLocalPopular = async () => {
@@ -25,7 +25,7 @@ export function LocalPopularBooks({ onBookSelect }: LocalPopularBooksProps) {
       const regionCode = getRegionCode();
       // 🛡️ 아동 전용 필터가 적용된 데이터를 가져옴
       const result = await fetchLocalKidsPopularBooks(regionCode || undefined);
-      
+
       setBooks(result.slice(0, 10));
     } catch (error) {
       console.error("[LocalPopularBooks] Failed to fetch:", error);
@@ -37,7 +37,7 @@ export function LocalPopularBooks({ onBookSelect }: LocalPopularBooksProps) {
 
   useEffect(() => {
     fetchLocalPopular();
-  }, [getRegionCode]);
+  }, [selectedRegion?.code, selectedSubRegion?.code, selectedDistrict?.code]);
 
   if (loading) {
     return (

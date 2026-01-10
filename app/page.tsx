@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
-import { Search, MapPin, BookOpen, Library as LibraryIcon, CheckCircle2, XCircle, X, HelpCircle, ChevronRight, TrendingUp } from "lucide-react";
+import { useEffect, useState, useMemo, useCallback } from "react";
+import { Search, MapPin, BookOpen, Library as LibraryIcon, CheckCircle2, XCircle, X, ChevronRight, TrendingUp } from "lucide-react";
 import { RegionSelector } from "@/features/region-selector/ui/region-selector";
 import { useRegionStore } from "@/features/region-selector/lib/use-region-store";
 import { useBookSearch } from "@/features/book-search/lib/use-book-search";
@@ -18,9 +18,9 @@ import { useCategoryTab } from "@/features/kids-mode/lib/use-category-tab";
 import { LibraryMap } from "@/features/library-map/ui/LibraryMap";
 import { FamilyCategories } from "@/features/recommendations/ui/family-categories";
 import { FamilyPopularBooks } from "@/features/recommendations/ui/family-popular-books";
-import { LibraryServiceGuide } from "@/features/recommendations/ui/library-service-guide";
 import { bookRepository } from "@/entities/book/repository/book.repository.impl";
 import { checkLibraryServices } from "@/shared/lib/utils/library-services";
+import { formatDistance } from "@/shared/lib/utils/distance";
 import { Input } from "@/shared/ui/input";
 import { Button } from "@/shared/ui/button";
 import { cn } from "@/shared/lib/cn";
@@ -32,6 +32,7 @@ export default function HomePage() {
   const [mounted, setMounted] = useState(false);
   const [showSmartFinder, setShowSmartFinder] = useState(false);
   const [serviceFilter, setServiceFilter] = useState<'all' | 'chaekium' | 'chaekbada'>('all');
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
 
   const { mode, setMode, getSearchConfig } = useSearchMode();
   const config = getSearchConfig();
@@ -49,7 +50,7 @@ export default function HomePage() {
     setMounted(true);
   }, []);
 
-  const { getRegionCode, selectedRegion, selectedSubRegion, selectedDistrict } = useRegionStore();
+  const { getRegionCode, selectedRegion, selectedSubRegion, selectedDistrict, reset: resetRegion } = useRegionStore();
   const {
     books,
     loading,
@@ -63,8 +64,31 @@ export default function HomePage() {
     clearLibraries,
     searchByKdc,
     setBooks,
+    setUserLocation: setBookSearchUserLocation,
+    mergeLibraries,
   } = useBookSearch();
-  const { loadLibraries } = useMapStore();
+  const { loadLibraries, userLocation: mapUserLocation, setSelectedLibrary } = useMapStore();
+
+  // 🛡️ 사용자 위치 가져오기
+  useEffect(() => {
+    if (mounted && navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const loc = {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+          };
+          setUserLocation(loc);
+          setBookSearchUserLocation(loc);
+          console.log(`[HomePage] User location: ${loc.lat}, ${loc.lng}`);
+        },
+        (error) => {
+          console.warn("[HomePage] 위치 정보를 가져올 수 없습니다:", error.message);
+        },
+        { enableHighAccuracy: true, timeout: 10000 }
+      );
+    }
+  }, [mounted, setBookSearchUserLocation]);
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -122,7 +146,8 @@ export default function HomePage() {
     }
     const targetIsbn = book.isbn13 || book.isbn;
     if (targetIsbn) {
-      await searchLibrariesWithBook(targetIsbn, regionCode);
+      // 🛡️ 사용자 위치 전달하여 거리 기반 정렬
+      await searchLibrariesWithBook(targetIsbn, regionCode, false, userLocation);
     }
   };
 
@@ -149,15 +174,36 @@ export default function HomePage() {
     });
   }, [librariesWithBook, serviceFilter]);
 
+  // 🛡️ 지역 변경 시 지도용 도서관 목록 로드
   useEffect(() => {
-    // 🛡️ 지역 코드가 완전히 확정되었을 때만 딱 한 번 실행
     const regionCode = getRegionCode();
     if (regionCode && mounted) {
-      // 깜빡임 방지를 위해 로딩 상태 확인 후 로드
-      console.log(`[HomePage] Loading libraries for: ${regionCode}`);
+      console.log(`[HomePage] Loading libraries for map: ${regionCode}`);
       loadLibraries(regionCode);
     }
-  }, [selectedRegion?.code, selectedSubRegion?.code, selectedDistrict?.code, mounted, loadLibraries]); // 🛡️ loadLibraries 추가하여 크기 유지
+  }, [selectedRegion?.code, selectedSubRegion?.code, selectedDistrict?.code, mounted, loadLibraries]);
+
+  // 🛡️ 지역 변경 시 선택된 책의 도서관 재검색
+  useEffect(() => {
+    if (!selectedBook || !mounted) return;
+
+    const regionCode = getRegionCode();
+    if (!regionCode) {
+      console.log(`[HomePage] No region selected, skipping library search`);
+      return;
+    }
+
+    const targetIsbn = selectedBook.isbn13 || selectedBook.isbn;
+    if (targetIsbn) {
+      // 🛡️ serviceFilter에 따라 검색 범위 결정
+      // 내 주변(all): false (좁은 범위 - 구/시 단위)
+      // 책이음/책바다: true (넓은 범위 - 광역시도 단위)
+      const isWideSearch = serviceFilter === 'chaekium' || serviceFilter === 'chaekbada';
+      console.log(`[HomePage] Region changed, re-searching libraries for: ${selectedBook.title}, wide: ${isWideSearch}, filter: ${serviceFilter}`);
+      searchLibrariesWithBook(targetIsbn, regionCode, isWideSearch, userLocation);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedRegion?.code, selectedSubRegion?.code, selectedDistrict?.code, selectedBook, mounted, serviceFilter]);
 
   if (!mounted) return null;
 
@@ -166,7 +212,15 @@ export default function HomePage() {
       <header className="sticky top-0 z-30 bg-white/70 backdrop-blur-xl border-b border-white/50 shadow-sm">
         <div className="max-w-2xl mx-auto px-4 py-5 space-y-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
+            <button
+              onClick={() => {
+                clearLibraries();
+                setShowSearchResults(false);
+                setSearchQuery("");
+                resetRegion(); // 🛡️ 지역 선택 초기화
+              }}
+              className="flex items-center gap-3 hover:opacity-80 transition-opacity"
+            >
               <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 rounded-2xl flex items-center justify-center shadow-lg shadow-purple-200">
                 <LibraryIcon className="w-7 h-7 text-white" />
               </div>
@@ -174,7 +228,7 @@ export default function HomePage() {
                 <h1 className="text-xl font-extrabold text-gray-900 tracking-tight">우리 가족 <span className="text-purple-600">도서관</span></h1>
                 <p className="text-xs font-medium text-gray-500">아이부터 할머니까지, 모두의 책방</p>
               </div>
-            </div>
+            </button>
             <div className="flex bg-gray-100/80 rounded-2xl p-1 border border-gray-200/50">
               <button onClick={() => setMode('kids')} className={cn("px-4 py-2 rounded-xl text-sm font-bold transition-all", mode === 'kids' ? "bg-white text-orange-500 shadow-sm" : "text-gray-500 hover:text-gray-700")}>🧸 아이책</button>
               <button onClick={() => setMode('general')} className={cn("px-4 py-2 rounded-xl text-sm font-bold transition-all", mode === 'general' ? "bg-white text-purple-600 shadow-sm" : "text-gray-500 hover:text-gray-700")}>👨‍👩‍👧‍👦 가족전체</button>
@@ -255,13 +309,22 @@ export default function HomePage() {
         )}
 
         <div className="mx-4 mt-6 h-[350px] rounded-[2rem] overflow-hidden border-4 border-white shadow-2xl bg-gray-100 relative">
-          <LibraryMap 
-            libraries={selectedBook ? filteredLibraries : undefined} 
+          <LibraryMap
+            libraries={selectedBook ? filteredLibraries : undefined}
             onZoomOut={async () => {
+                // 🛡️ "내 주변"일 때는 줌아웃해도 확장 검색 안 함
+                if (serviceFilter === 'all') {
+                  console.log(`[HomePage] Zoom out ignored - "내 주변" mode`);
+                  return;
+                }
+
+                // 🛡️ 책이음/책바다일 때만 줌아웃으로 확장 검색
                 const regionCode = getRegionCode();
                 const targetIsbn = selectedBook?.isbn13 || selectedBook?.isbn;
                 if (targetIsbn && regionCode && regionCode.length === 5) {
-                    await searchLibrariesWithBook(targetIsbn, regionCode, true);
+                    console.log(`[HomePage] Zoom out - expanding search for ${serviceFilter}`);
+                    // 줌아웃 시 광역시도 단위로 확장
+                    await searchLibrariesWithBook(targetIsbn, regionCode, true, userLocation);
                 }
             }}
           />
@@ -277,39 +340,39 @@ export default function HomePage() {
 
         {selectedBook && (
           <div className="mx-4 mt-8 mb-6">
-            <LibraryServiceGuide />
             <div className="flex flex-col gap-6 mt-8 mb-6 px-2">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-black text-gray-900 flex items-center gap-2">
                   <div className="p-1.5 bg-green-100 rounded-lg"><LibraryIcon className="w-6 h-6 text-green-600" /></div>
                   <span>어떻게 빌릴까요?</span>
                 </h2>
-                <Button variant="ghost" size="sm" onClick={async () => {
-                    const regionCode = getRegionCode();
-                    const targetIsbn = selectedBook.isbn13 || selectedBook.isbn;
-                    if (targetIsbn && regionCode) await searchLibrariesWithBook(targetIsbn, regionCode, true);
-                  }} className="text-xs font-black text-blue-600 h-10 px-4 hover:bg-blue-50 rounded-2xl border border-blue-100 shadow-sm">📍 더 넓은 지역 찾기</Button>
               </div>
 
               <div className="flex bg-gray-100/80 p-1.5 rounded-[1.5rem] gap-1">
-                <button onClick={() => {
+                <button onClick={async () => {
                     setServiceFilter('all');
+                    setSelectedLibrary(null); // 🛡️ 선택된 도서관 초기화
                     const regionCode = getRegionCode();
                     const targetIsbn = selectedBook.isbn13 || selectedBook.isbn;
-                    if (targetIsbn && regionCode) searchLibrariesWithBook(targetIsbn, regionCode, false);
+                    // 🛡️ 내 주변: 선택한 지역 (구/시) 단위만 검색
+                    if (targetIsbn && regionCode) await searchLibrariesWithBook(targetIsbn, regionCode, false, userLocation);
                   }} className={cn("flex-1 py-3 rounded-xl text-xs font-black transition-all", serviceFilter === 'all' ? "bg-white text-gray-900 shadow-md" : "text-gray-500")}>내 주변</button>
-                <button onClick={() => {
+                <button onClick={async () => {
                     setServiceFilter('chaekium');
+                    setSelectedLibrary(null); // 🛡️ 선택된 도서관 초기화
                     const regionCode = getRegionCode();
                     const targetIsbn = selectedBook.isbn13 || selectedBook.isbn;
-                    if (targetIsbn && regionCode) searchLibrariesWithBook(targetIsbn, regionCode, true);
-                  }} className={cn("flex-1 py-3 rounded-xl text-xs font-black transition-all", serviceFilter === 'chaekium' ? "bg-amber-500 text-white shadow-lg shadow-amber-100" : "text-gray-500")}>💳 통합회원증</button>
-                <button onClick={() => {
+                    // 🛡️ 책이음: 광역시도 단위로 검색 (내 주변보다 넓음, 줌아웃으로 더 확장 가능)
+                    if (targetIsbn && regionCode) await searchLibrariesWithBook(targetIsbn, regionCode, true, userLocation);
+                  }} className={cn("flex-1 py-3 rounded-xl text-xs font-black transition-all", serviceFilter === 'chaekium' ? "bg-amber-500 text-white shadow-lg shadow-amber-100" : "text-gray-500")}>💳 책이음</button>
+                <button onClick={async () => {
                     setServiceFilter('chaekbada');
+                    setSelectedLibrary(null); // 🛡️ 선택된 도서관 초기화
                     const regionCode = getRegionCode();
                     const targetIsbn = selectedBook.isbn13 || selectedBook.isbn;
-                    if (targetIsbn && regionCode) searchLibrariesWithBook(targetIsbn, regionCode, true);
-                  }} className={cn("flex-1 py-3 rounded-xl text-xs font-black transition-all", serviceFilter === 'chaekbada' ? "bg-emerald-500 text-white shadow-lg shadow-emerald-100" : "text-gray-500")}>🌊 택배배송</button>
+                    // 🛡️ 책바다: 광역시도 단위로 검색 (내 주변보다 넓음, 줌아웃으로 더 확장 가능)
+                    if (targetIsbn && regionCode) await searchLibrariesWithBook(targetIsbn, regionCode, true, userLocation);
+                  }} className={cn("flex-1 py-3 rounded-xl text-xs font-black transition-all", serviceFilter === 'chaekbada' ? "bg-emerald-500 text-white shadow-lg shadow-emerald-100" : "text-gray-500")}>🌊 책바다</button>
               </div>
             </div>
 
@@ -317,13 +380,80 @@ export default function HomePage() {
               <div className="space-y-4">{[1, 2, 3].map((i) => <div key={i} className="h-24 bg-white rounded-3xl animate-pulse border border-gray-100" />)}</div>
             ) : (
               <div className="space-y-4">
+                {/* 🛡️ 책이음 서비스 설명 */}
+                {serviceFilter === 'chaekium' && (
+                  <div className="p-6 bg-gradient-to-br from-amber-50 to-amber-100/50 rounded-[2rem] border-2 border-amber-200 shadow-sm">
+                    <div className="flex items-start gap-3 mb-3">
+                      <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm shrink-0">
+                        <span className="text-xl">💳</span>
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="text-base font-black text-amber-900 mb-1">책이음 서비스란?</h4>
+                        <p className="text-xs text-amber-800 leading-relaxed font-medium">
+                          전국 공공도서관을 하나의 회원증으로 이용할 수 있는 통합 서비스입니다. 한 번만 가입하면 전국 어디서든 책을 빌릴 수 있어요!
+                        </p>
+                      </div>
+                    </div>
+                    <a
+                      href="https://books.nl.go.kr/PU/contents/P20201000000.do"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 px-5 py-3 bg-amber-600 hover:bg-amber-700 text-white text-sm font-black rounded-xl shadow-md transition-all"
+                    >
+                      <span>책이음 회원가입 하러가기</span>
+                      <ChevronRight className="w-4 h-4" />
+                    </a>
+                  </div>
+                )}
+
+                {/* 🛡️ 책바다 서비스 설명 */}
+                {serviceFilter === 'chaekbada' && (
+                  <div className="p-6 bg-gradient-to-br from-emerald-50 to-emerald-100/50 rounded-[2rem] border-2 border-emerald-200 shadow-sm">
+                    <div className="flex items-start gap-3 mb-3">
+                      <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm shrink-0">
+                        <span className="text-xl">🌊</span>
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="text-base font-black text-emerald-900 mb-1">책바다 서비스란?</h4>
+                        <p className="text-xs text-emerald-800 leading-relaxed font-medium mb-2">
+                          우리 동네에 없는 책을 전국의 다른 도서관에서 빌려 집 근처 도서관으로 배달받을 수 있는 국가 상호대차 서비스입니다.
+                        </p>
+                        <p className="text-[11px] text-emerald-700 font-bold bg-emerald-50/50 px-3 py-1.5 rounded-lg inline-block">
+                          💰 배송비: 왕복 약 5,200원 (지자체 지원 가능)
+                        </p>
+                      </div>
+                    </div>
+                    <a
+                      href="https://books.nl.go.kr/PU/contents/P10201000000.do"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 px-5 py-3 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-black rounded-xl shadow-md transition-all"
+                    >
+                      <span>책바다 신청하러 가기</span>
+                      <ChevronRight className="w-4 h-4" />
+                    </a>
+                  </div>
+                )}
+
                 {filteredLibraries.map((lib) => {
                     const services = checkLibraryServices(lib.libName);
                     return (
-                      <div key={lib.libCode} className="p-6 bg-white rounded-[2rem] border border-gray-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all group">
+                      <div 
+                        key={lib.libCode} 
+                        onClick={() => setSelectedLibrary(lib)}
+                        className="p-6 bg-white rounded-[2rem] border border-gray-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all group cursor-pointer"
+                      >
                         <div className="flex items-start justify-between gap-4">
                           <div className="flex-1 min-w-0">
-                            <h3 className="font-black text-gray-900 text-lg mb-1 group-hover:text-purple-600 transition-colors">{lib.libName}</h3>
+                            <div className="flex items-center gap-2 mb-1">
+                              <h3 className="font-black text-gray-900 text-lg group-hover:text-purple-600 transition-colors">{lib.libName}</h3>
+                              {/* 🛡️ 거리 표시 */}
+                              {lib.distance !== undefined && (
+                                <span className="text-[10px] bg-blue-50 text-blue-600 px-2 py-0.5 rounded-md font-black border border-blue-100">
+                                  📍 {formatDistance(lib.distance)}
+                                </span>
+                              )}
+                            </div>
                             {lib.address && <div className="flex items-center gap-1 text-gray-400 mb-3"><MapPin className="w-3.5 h-3.5 shrink-0" /><p className="text-xs truncate font-bold">{lib.address}</p></div>}
                             <div className="flex flex-wrap gap-2 mb-4">
                                <span className="text-[10px] bg-purple-50 text-purple-600 px-2 py-1 rounded-lg font-black border border-purple-100">평일 오전 방문 권장 ✨</span>
@@ -401,9 +531,11 @@ export default function HomePage() {
               <section className="mx-4 mt-12 mb-20 p-8 bg-white rounded-[2.5rem] border border-gray-100 shadow-sm">
                  <h3 className="text-lg font-black text-gray-800 mb-4 flex items-center gap-2"><span className="text-xl">💡</span>도서관 이용 꿀팁</h3>
                  <div className="space-y-4 text-sm text-gray-600 leading-relaxed font-medium">
-                    <p><strong className="text-purple-600">책바다 서비스:</strong> 찾는 책이 우리 동네 도서관에 없나요? 국가 상호대차 서비스인 '책바다'를 이용하면 전국의 다른 도서관 책을 우리 동네 도서관에서 받아볼 수 있어요.</p>
-                    <p><strong className="text-purple-600">희망도서 신청:</strong> 도서관 홈페이지에서 희망도서를 신청하면 도서관이 직접 책을 구매해 드려요.</p>
-                    <p><strong className="text-purple-600">전자도서관 이용:</strong> 경기도사이버도서관 등 전자도서관을 이용해 보세요. 스마트폰 하나로 무료로 빌려볼 수 있습니다.</p>
+                    <p><strong className="text-purple-600">평일 오전 방문 추천:</strong> 도서관은 평일 오전 10~12시가 가장 한산해요. 조용한 환경에서 책을 고르고, 사서님께 직접 추천도 받을 수 있습니다.</p>
+                    <p><strong className="text-purple-600">희망도서 신청 꿀팁:</strong> 신간이 나오면 도서관 홈페이지에서 바로 희망도서 신청하세요. 보통 1~2주 안에 구매해주고, 신청자에게 우선 대출 기회가 주어집니다.</p>
+                    <p><strong className="text-purple-600">연체료 없는 반납 방법:</strong> 반납일이 다가오는데 다 못 읽었다면? 도서관 홈페이지나 앱에서 온라인 대출 연장(1~2회 가능)을 활용하세요. 예약자가 없으면 바로 연장됩니다.</p>
+                    <p><strong className="text-purple-600">전자도서관 활용:</strong> 경기도사이버도서관, 서울도서관 등 전자도서관은 대기 없이 바로 대출 가능한 전자책이 많아요. 스마트폰 앱 하나면 언제 어디서나 무료로 읽을 수 있습니다.</p>
+                    <p><strong className="text-purple-600">도서관 프로그램 활용:</strong> 대부분의 도서관은 무료 독서 프로그램, 작가 강연회, 영화 상영 등 다양한 문화 행사를 진행해요. 도서관 홈페이지나 공지사항을 주기적으로 확인하면 가족이 함께 즐길 수 있는 알찬 혜택을 받을 수 있습니다.</p>
                  </div>
               </section>
             </div>

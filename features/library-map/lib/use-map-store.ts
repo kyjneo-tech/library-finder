@@ -30,7 +30,21 @@ export const useMapStore = create<MapState>((set, get) => ({
   loadLibraries: async (region?: string) => {
     set({ loading: true, error: null });
     try {
-      const result = await libraryRepository.getLibraries({ region });
+      const filters: any = {}; // LibrarySearchFilters 타입에 맞게 구성
+      
+      if (region) {
+        if (region.length === 2) {
+          filters.region = region;
+        } else if (region.length === 5) {
+          filters.region = region.substring(0, 2);
+          filters.dtl_region = region;
+        } else {
+            // 그 외의 경우 (혹시 모를 예외 처리)
+            filters.region = region; 
+        }
+      }
+
+      const result = await libraryRepository.getLibraries(filters);
       set({
         libraries: result.libraries,
         loading: false,

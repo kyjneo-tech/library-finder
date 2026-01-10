@@ -5,11 +5,13 @@ import { Book, BookSearchFilters } from "@/entities/book/model/types";
 import { Library } from "@/entities/library/model/types";
 import { bookRepository } from "@/entities/book/repository/book.repository.impl";
 import { libraryRepository } from "@/entities/library/repository/library.repository.impl";
+import { calculateDistance } from "@/shared/lib/utils/distance";
 
 interface LibraryWithBookInfo extends Library {
   hasBook?: boolean;
   loanAvailable?: boolean;
   homepage?: string;
+  distance?: number; // 사용자 위치 기준 거리 (미터)
 }
 
 interface BookSearchState {
@@ -27,17 +29,22 @@ interface BookSearchState {
   librariesWithBook: LibraryWithBookInfo[];
   librariesLoading: boolean;
 
+  // 사용자 위치 (거리 계산용)
+  userLocation: { lat: number; lng: number } | null;
+
   // Actions
   searchBooks: (filters: BookSearchFilters) => Promise<void>;
   setFilters: (filters: Partial<BookSearchFilters>) => void;
   clearSearch: () => void;
   selectBook: (book: Book) => Promise<void>;
-  searchLibrariesWithBook: (isbn: string, region: string, isWideSearch?: boolean) => Promise<void>;
+  searchLibrariesWithBook: (isbn: string, region: string, isWideSearch?: boolean, userLocation?: { lat: number; lng: number } | null) => Promise<void>;
   searchLibrariesNationwide: (isbn: string) => Promise<void>;
   deepScan: (isbn: string, region: string) => Promise<void>;
   clearLibraries: () => void;
   searchByKdc: (kdc: string, keyword: string) => Promise<void>;
   setBooks: (books: Book[]) => void;
+  setUserLocation: (location: { lat: number; lng: number } | null) => void;
+  mergeLibraries: (newLibraries: LibraryWithBookInfo[]) => void; // 도서관 목록 병합 (줌아웃용)
 }
 
 export const useBookSearch = create<BookSearchState>((set, get) => ({
@@ -52,6 +59,7 @@ export const useBookSearch = create<BookSearchState>((set, get) => ({
   selectedBook: null,
   librariesWithBook: [],
   librariesLoading: false,
+  userLocation: null,
 
   searchBooks: async (filters: BookSearchFilters) => {
     set({ loading: true, error: null });
@@ -174,9 +182,12 @@ export const useBookSearch = create<BookSearchState>((set, get) => ({
     }
   },
 
-  searchLibrariesWithBook: async (isbn: string, region: string, isWideSearch: boolean = false) => {
+  searchLibrariesWithBook: async (isbn: string, region: string, isWideSearch: boolean = false, userLocation?: { lat: number; lng: number } | null) => {
     // 🛡️ [방어] 이미 같은 조건으로 로딩 중이면 중복 호출 차단
     if (get().librariesLoading) return;
+
+    // 사용자 위치가 파라미터로 전달되면 저장
+    const currentUserLocation = userLocation ?? get().userLocation;
 
     console.log(`[useBookSearch] Searching libraries for ISBN: ${isbn}, Region: ${region}, Wide: ${isWideSearch}`);
     set({ librariesLoading: true });
@@ -191,6 +202,20 @@ export const useBookSearch = create<BookSearchState>((set, get) => ({
       const checkLimit = 5; // 호출 절약을 위해 5곳 우선 확인
       const librariesWithInfo = await Promise.all(
         result.libraries.map(async (lib, idx) => {
+          const lat = lib.latitude ? parseFloat(lib.latitude) : 0;
+          const lng = lib.longitude ? parseFloat(lib.longitude) : 0;
+          
+          // 🛡️ 거리 계산 (사용자 위치가 있을 경우)
+          let distance: number | undefined;
+          if (currentUserLocation && lat && lng) {
+            distance = calculateDistance(
+              currentUserLocation.lat,
+              currentUserLocation.lng,
+              lat,
+              lng
+            );
+          }
+
           if (idx < checkLimit) {
             try {
               const availability = await bookRepository.getBookAvailability(isbn, lib.libraryCode);
@@ -200,11 +225,12 @@ export const useBookSearch = create<BookSearchState>((set, get) => ({
                 libName: lib.libraryName,
                 address: lib.address || "",
                 tel: lib.tel || "",
-                latitude: lib.latitude ? parseFloat(lib.latitude) : 0,
-                longitude: lib.longitude ? parseFloat(lib.longitude) : 0,
+                latitude: lat,
+                longitude: lng,
                 homepage: lib.homepage,
                 hasBook: info?.hasBook ?? true,
                 loanAvailable: info?.loanAvailable ?? false,
+                distance,
               };
             } catch (e) { /* 에러 무시 */ }
           }
@@ -213,16 +239,28 @@ export const useBookSearch = create<BookSearchState>((set, get) => ({
             libName: lib.libraryName,
             address: lib.address || "",
             tel: lib.tel || "",
-            latitude: lib.latitude ? parseFloat(lib.latitude) : 0,
-            longitude: lib.longitude ? parseFloat(lib.longitude) : 0,
+            latitude: lat,
+            longitude: lng,
             homepage: lib.homepage,
             hasBook: true,
             loanAvailable: false,
+            distance,
           };
         })
       );
 
-      const sortedLibraries = librariesWithInfo.sort((a, b) => (a.loanAvailable === b.loanAvailable ? 0 : a.loanAvailable ? -1 : 1));
+      // 🛡️ 정렬: 1) 대출가능 우선, 2) 거리 가까운 순
+      const sortedLibraries = librariesWithInfo.sort((a, b) => {
+        // 대출 가능 여부 먼저 비교
+        if (a.loanAvailable !== b.loanAvailable) {
+          return a.loanAvailable ? -1 : 1;
+        }
+        // 거리가 있으면 거리순 정렬
+        if (a.distance !== undefined && b.distance !== undefined) {
+          return a.distance - b.distance;
+        }
+        return 0;
+      });
 
       set({
         librariesWithBook: sortedLibraries,
@@ -377,5 +415,48 @@ export const useBookSearch = create<BookSearchState>((set, get) => ({
       selectedBook: null,
       librariesWithBook: []
     });
+  },
+
+  setUserLocation: (location: { lat: number; lng: number } | null) => {
+    set({ userLocation: location });
+  },
+
+  // 🛡️ 도서관 목록 병합 (줌아웃 시 기존 + 새로운 도서관 병합)
+  mergeLibraries: (newLibraries: LibraryWithBookInfo[]) => {
+    const { librariesWithBook, userLocation } = get();
+    
+    // 기존 도서관 코드 Set
+    const existingCodes = new Set(librariesWithBook.map(lib => lib.libCode));
+    
+    // 새로운 도서관만 필터링
+    const uniqueNewLibraries = newLibraries.filter(lib => !existingCodes.has(lib.libCode));
+    
+    // 거리 계산 (새 도서관에 대해)
+    const newLibsWithDistance = uniqueNewLibraries.map(lib => {
+      if (userLocation && lib.latitude && lib.longitude) {
+        const distance = calculateDistance(
+          userLocation.lat,
+          userLocation.lng,
+          lib.latitude,
+          lib.longitude
+        );
+        return { ...lib, distance };
+      }
+      return lib;
+    });
+    
+    // 병합 후 정렬
+    const merged = [...librariesWithBook, ...newLibsWithDistance];
+    const sorted = merged.sort((a, b) => {
+      if (a.loanAvailable !== b.loanAvailable) {
+        return a.loanAvailable ? -1 : 1;
+      }
+      if (a.distance !== undefined && b.distance !== undefined) {
+        return a.distance - b.distance;
+      }
+      return 0;
+    });
+    
+    set({ librariesWithBook: sorted });
   },
 }));

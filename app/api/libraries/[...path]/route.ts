@@ -59,8 +59,22 @@ export async function GET(
 
   console.log(`[API Proxy] Forwarding to: ${BASE_URL}/${endpoint}`);
 
+  // 🛡️ 캐싱 전략 설정
+  // 실시간성이 필요한 API (대출 가능 여부 등)는 캐싱하지 않음
+  const NO_CACHE_ENDPOINTS = ['bookExist', 'usageAnalysisList', 'usageTrend'];
+  const shouldCache = !NO_CACHE_ENDPOINTS.some(path => endpoint.includes(path));
+
   try {
-    const response = await fetch(url);
+    const fetchOptions: RequestInit = {};
+    
+    // Next.js Data Cache 설정 (서버 측 캐싱)
+    if (shouldCache) {
+      fetchOptions.next = { revalidate: 86400 }; // 24시간 캐시
+    } else {
+      fetchOptions.cache = 'no-store'; // 캐시 안 함
+    }
+
+    const response = await fetch(url, fetchOptions);
     
     if (!response.ok) {
       return NextResponse.json(
@@ -71,12 +85,19 @@ export async function GET(
 
     const data = await response.json();
     
-    // ✅ [API 다이어트] 캐시 시간을 24시간으로 대폭 연장 (API 쿼터 절약 핵심)
-    return NextResponse.json(data, {
-      headers: {
-        "Cache-Control": "public, s-maxage=86400, stale-while-revalidate=3600",
-      },
-    });
+    // CDN 캐시 헤더 설정 (클라이언트/CDN 측 캐싱)
+    const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+    };
+
+    if (shouldCache) {
+        // 24시간(86400초) 동안 신선함 유지, 이후 1시간(3600초) 동안은 낡은 캐시 허용하며 백그라운드 갱신
+        headers["Cache-Control"] = "public, s-maxage=86400, stale-while-revalidate=3600";
+    } else {
+        headers["Cache-Control"] = "no-store, no-cache, must-revalidate";
+    }
+
+    return NextResponse.json(data, { headers });
   } catch (error) {
     console.error("[API Proxy] Error:", error);
     return NextResponse.json(
