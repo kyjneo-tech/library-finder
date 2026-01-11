@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { Search, MapPin, BookOpen, Library as LibraryIcon, CheckCircle2, XCircle, X, ChevronRight, TrendingUp } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { RegionSelector } from "@/features/region-selector/ui/region-selector";
 import { useRegionStore } from "@/features/region-selector/lib/use-region-store";
 import { useBookSearch } from "@/features/book-search/lib/use-book-search";
@@ -21,6 +22,8 @@ import { FamilyPopularBooks } from "@/features/recommendations/ui/family-popular
 import { bookRepository } from "@/entities/book/repository/book.repository.impl";
 import { checkLibraryServices } from "@/shared/lib/utils/library-services";
 import { formatDistance } from "@/shared/lib/utils/distance";
+import { sanitizeHTML } from "@/shared/lib/utils/sanitize";
+import { fadeInDown, fadeInUp, hoverScale, buttonPress, staggerContainer, staggerItem } from "@/shared/lib/animations/variants";
 import { Input } from "@/shared/ui/input";
 import { Button } from "@/shared/ui/button";
 import { cn } from "@/shared/lib/cn";
@@ -208,45 +211,153 @@ export default function HomePage() {
   if (!mounted) return null;
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-indigo-50 via-white to-purple-50">
-      <header className="sticky top-0 z-30 bg-white/70 backdrop-blur-xl border-b border-white/50 shadow-sm">
-        <div className="max-w-2xl mx-auto px-4 py-5 space-y-4">
-          <div className="flex items-center justify-between">
-            <button
+    <div className="min-h-screen bg-gradient-soft relative overflow-hidden">
+      {/* ✨ 배경 장식 */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-wisdom-200 rounded-full blur-3xl opacity-20 animate-pulse" />
+        <div className="absolute top-60 -left-40 w-96 h-96 bg-warmth-200 rounded-full blur-3xl opacity-20 animate-pulse" style={{ animationDelay: '1s' }} />
+      </div>
+
+      <motion.header
+        className="sticky top-0 z-30 glass border-b border-white/50 shadow-premium"
+        initial={{ y: -100, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ type: "spring", stiffness: 100, damping: 20 }}
+      >
+        <div className="max-w-2xl mx-auto px-4 py-5 space-y-4 relative">
+          <motion.div
+            className="flex items-center justify-between"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.2 }}
+          >
+            <motion.button
               onClick={() => {
                 clearLibraries();
                 setShowSearchResults(false);
                 setSearchQuery("");
-                resetRegion(); // 🛡️ 지역 선택 초기화
+                resetRegion();
               }}
-              className="flex items-center gap-3 hover:opacity-80 transition-opacity"
+              className="flex items-center gap-2 group"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
             >
-              <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 rounded-2xl flex items-center justify-center shadow-lg shadow-purple-200">
-                <LibraryIcon className="w-7 h-7 text-white" />
-              </div>
+              <motion.div
+                className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-purple rounded-2xl flex items-center justify-center shadow-glow-purple relative overflow-hidden"
+                animate={{
+                  boxShadow: [
+                    "0 8px 32px rgba(168, 85, 247, 0.25)",
+                    "0 8px 32px rgba(168, 85, 247, 0.4)",
+                    "0 8px 32px rgba(168, 85, 247, 0.25)"
+                  ]
+                }}
+                transition={{ duration: 2, repeat: Infinity }}
+              >
+                <LibraryIcon className="w-6 h-6 sm:w-7 sm:h-7 text-white relative z-10" />
+                <div className="absolute inset-0 bg-white/20 blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
+              </motion.div>
               <div>
-                <h1 className="text-xl font-extrabold text-gray-900 tracking-tight">우리 가족 <span className="text-purple-600">도서관</span></h1>
-                <p className="text-xs font-medium text-gray-500">아이부터 할머니까지, 모두의 책방</p>
+                <h1 className="text-lg sm:text-xl font-extrabold bg-gradient-to-r from-wisdom-600 to-warmth-600 bg-clip-text text-transparent tracking-tight whitespace-nowrap">
+                  우리 가족 도서관
+                </h1>
+                <p className="text-[10px] sm:text-xs font-bold text-gray-500 hidden sm:block">
+                  아이부터 할머니까지, 모두의 책방
+                </p>
               </div>
-            </button>
-            <div className="flex bg-gray-100/80 rounded-2xl p-1 border border-gray-200/50">
-              <button onClick={() => setMode('kids')} className={cn("px-4 py-2 rounded-xl text-sm font-bold transition-all", mode === 'kids' ? "bg-white text-orange-500 shadow-sm" : "text-gray-500 hover:text-gray-700")}>🧸 아이책</button>
-              <button onClick={() => setMode('general')} className={cn("px-4 py-2 rounded-xl text-sm font-bold transition-all", mode === 'general' ? "bg-white text-purple-600 shadow-sm" : "text-gray-500 hover:text-gray-700")}>👨‍👩‍👧‍👦 가족전체</button>
+            </motion.button>
+            <div className="flex bg-white/60 backdrop-blur-lg rounded-2xl p-1 border border-wisdom-100/50 shrink-0 shadow-sm">
+              <motion.button
+                onClick={() => setMode('kids')}
+                className={cn(
+                  "px-2.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap relative overflow-hidden",
+                  mode === 'kids'
+                    ? "bg-gradient-hero text-white shadow-glow-warmth"
+                    : "text-gray-600 hover:text-warmth-600"
+                )}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                {mode === 'kids' && (
+                  <motion.div
+                    className="absolute inset-0 bg-white/20"
+                    layoutId="activeTab"
+                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                  />
+                )}
+                <span className="relative z-10">🧸 아이책</span>
+              </motion.button>
+              <motion.button
+                onClick={() => setMode('general')}
+                className={cn(
+                  "px-2.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap relative overflow-hidden",
+                  mode === 'general'
+                    ? "bg-gradient-purple text-white shadow-glow-purple"
+                    : "text-gray-600 hover:text-wisdom-600"
+                )}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                {mode === 'general' && (
+                  <motion.div
+                    className="absolute inset-0 bg-white/20"
+                    layoutId="activeTab"
+                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                  />
+                )}
+                <span className="relative z-10">👨‍👩‍👧‍👦 가족</span>
+              </motion.button>
             </div>
-          </div>
-          <div className="bg-white/50 rounded-2xl p-1"><RegionSelector /></div>
-          <form onSubmit={handleSearch} className="relative group">
-            <div className="relative">
-              <div className="absolute left-4 top-1/2 -translate-y-1/2 w-6 h-6 flex items-center justify-center"><Search className="w-5 h-5 text-gray-400 group-focus-within:text-purple-400 transition-colors" /></div>
-              <Input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder={config.placeholder} className="pl-12 pr-24 h-14 rounded-2xl border-2 border-gray-100 bg-white shadow-md focus:border-purple-200 focus:ring-purple-100 text-base font-medium transition-all" />
-              <Button type="submit" disabled={loading || !searchQuery.trim()} className="absolute right-2 top-1/2 -translate-y-1/2 h-10 px-5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-sm font-bold shadow-md shadow-purple-100">{loading ? "찾는 중..." : "찾기"}</Button>
-            </div>
-          </form>
+          </motion.div>
+          <motion.div
+            className="bg-white/50 rounded-2xl p-1"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+          >
+            <RegionSelector />
+          </motion.div>
+          <motion.form
+            onSubmit={handleSearch}
+            className="relative group"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+          >
+            <motion.div
+              className="relative"
+              whileFocus={{ scale: 1.02 }}
+              transition={{ type: "spring", stiffness: 300 }}
+            >
+              <motion.div
+                className="absolute left-4 top-1/2 -translate-y-1/2 w-6 h-6 flex items-center justify-center"
+                animate={{ rotate: [0, -10, 10, 0] }}
+                transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
+              >
+                <Search className="w-5 h-5 text-gray-400 group-focus-within:text-purple-400 transition-colors" />
+              </motion.div>
+              <Input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder={config.placeholder}
+                className="pl-12 pr-24 h-14 rounded-2xl border-2 border-gray-100 bg-white shadow-md focus:border-purple-200 focus:ring-purple-100 text-base font-medium transition-all"
+              />
+              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                <Button
+                  type="submit"
+                  disabled={loading || !searchQuery.trim()}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 h-10 px-5 rounded-xl bg-gradient-purple text-white text-sm font-bold shadow-glow-purple"
+                >
+                  {loading ? "찾는 중..." : "찾기"}
+                </Button>
+              </motion.div>
+            </motion.div>
+          </motion.form>
           {mode === 'kids' && <AgeFilter />}
         </div>
-      </header>
+      </motion.header>
 
-      <main className="max-w-2xl mx-auto pb-20">
+      <main className="max-w-2xl mx-auto pb-20 relative z-10">
         {selectedBook && (
           <div className="mx-4 mt-6 p-6 bg-white rounded-[2rem] border-2 border-purple-50 shadow-xl shadow-purple-100/50 relative transition-all animate-in zoom-in-95 duration-300">
             <button onClick={clearLibraries} className="absolute -top-2 -right-2 p-2 bg-white text-gray-400 hover:text-gray-600 shadow-lg border border-gray-100 rounded-full transition-all hover:rotate-90"><X className="w-5 h-5" /></button>
@@ -297,8 +408,8 @@ export default function HomePage() {
                 <div className="space-y-3">
                   {reviews.map((rev, i) => (
                     <a key={i} href={rev.link} target="_blank" rel="noopener noreferrer" className="block p-4 bg-white border border-gray-100 rounded-2xl hover:border-purple-200 transition-all shadow-sm group">
-                      <h5 className="text-sm font-bold text-gray-800 mb-1 line-clamp-1 group-hover:text-purple-600 transition-colors" dangerouslySetInnerHTML={{ __html: rev.title }} />
-                      <p className="text-xs text-gray-500 line-clamp-2 leading-relaxed" dangerouslySetInnerHTML={{ __html: rev.description }} />
+                      <h5 className="text-sm font-bold text-gray-800 mb-1 line-clamp-1 group-hover:text-purple-600 transition-colors" dangerouslySetInnerHTML={{ __html: sanitizeHTML(rev.title) }} />
+                      <p className="text-xs text-gray-500 line-clamp-2 leading-relaxed" dangerouslySetInnerHTML={{ __html: sanitizeHTML(rev.description) }} />
                       <div className="mt-2 text-[10px] text-purple-400 font-bold">블로그 리뷰 보기 &gt;</div>
                     </a>
                   ))}
@@ -377,9 +488,26 @@ export default function HomePage() {
             </div>
 
             {librariesLoading ? (
-              <div className="space-y-4">{[1, 2, 3].map((i) => <div key={i} className="h-24 bg-white rounded-3xl animate-pulse border border-gray-100" />)}</div>
-            ) : (
               <div className="space-y-4">
+                {[1, 2, 3].map((i) => (
+                  <motion.div
+                    key={i}
+                    className="h-24 bg-gradient-to-r from-white to-gray-50 rounded-3xl border border-gray-100 relative overflow-hidden"
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: i * 0.1 }}
+                  >
+                    <div className="absolute inset-0 shimmer" />
+                  </motion.div>
+                ))}
+              </div>
+            ) : (
+              <motion.div
+                className="space-y-4"
+                initial="initial"
+                animate="animate"
+                variants={staggerContainer}
+              >
                 {/* 🛡️ 책이음 서비스 설명 */}
                 {serviceFilter === 'chaekium' && (
                   <div className="p-6 bg-gradient-to-br from-amber-50 to-amber-100/50 rounded-[2rem] border-2 border-amber-200 shadow-sm">
@@ -435,13 +563,20 @@ export default function HomePage() {
                   </div>
                 )}
 
-                {filteredLibraries.map((lib) => {
+                {filteredLibraries.map((lib, idx) => {
                     const services = checkLibraryServices(lib.libName);
                     return (
-                      <div 
-                        key={lib.libCode} 
+                      <motion.div
+                        key={lib.libCode}
                         onClick={() => setSelectedLibrary(lib)}
-                        className="p-6 bg-white rounded-[2rem] border border-gray-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all group cursor-pointer"
+                        className="p-6 bg-white rounded-[2rem] border border-gray-100 shadow-sm group cursor-pointer will-change-transform"
+                        variants={staggerItem}
+                        whileHover={{
+                          y: -4,
+                          boxShadow: "0 20px 40px rgba(0, 0, 0, 0.12)",
+                          transition: { type: "spring", stiffness: 300 }
+                        }}
+                        whileTap={{ scale: 0.98 }}
                       >
                         <div className="flex items-start justify-between gap-4">
                           <div className="flex-1 min-w-0">
@@ -466,10 +601,10 @@ export default function HomePage() {
                             {lib.loanAvailable ? <><CheckCircle2 className="w-6 h-6 mb-0.5" /><span>대출가능!</span></> : <><XCircle className="w-6 h-6 mb-0.5" /><span>대출중</span></>}
                           </div>
                         </div>
-                      </div>
+                      </motion.div>
                     );
                   })}
-              </div>
+              </motion.div>
             )}
           </div>
         )}

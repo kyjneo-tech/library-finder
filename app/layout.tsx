@@ -3,6 +3,14 @@ import "./globals.css";
 import { Toaster } from "sonner";
 import Script from "next/script";
 import { Footer } from "@/shared/ui/footer";
+import { Noto_Sans_KR } from "next/font/google";
+
+const notoSansKR = Noto_Sans_KR({
+  weight: ["400", "500", "700", "900"],
+  subsets: ["latin"],
+  variable: "--font-noto-sans",
+  display: "swap",
+});
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -72,8 +80,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ko">
-      <body className="antialiased min-h-screen flex flex-col bg-white text-gray-900 font-sans">
+    <html lang="ko" className={notoSansKR.variable}>
+      <body className="antialiased min-h-screen flex flex-col bg-white text-gray-900" style={{ fontFamily: 'var(--font-noto-sans), -apple-system, sans-serif' }}>
         <div className="flex-1 w-full">
           {children}
         </div>
@@ -84,10 +92,10 @@ export default function RootLayout({
           strategy="beforeInteractive"
         />
         {/* 구글 애드센스 스크립트 (승인 후 활성화) */}
-        {/* <Script 
-          async 
-          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXXXXXXXXXXXXXXX" 
-          crossOrigin="anonymous" 
+        {/* <Script
+          async
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXXXXXXXXXXXXXXX"
+          crossOrigin="anonymous"
           strategy="afterInteractive"
         /> */}
       </body>

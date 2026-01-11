@@ -1,43 +1,74 @@
 @import "tailwindcss";
 
 @theme {
-  /* Primary Colors - 도서관 테마 (따뜻한 파란색 계열) */
-  --color-primary: #3b82f6;
+  /* 🌅 Warmth Colors - 따뜻한 가족의 온기 */
+  --color-warmth-50: #fff7ed;
+  --color-warmth-100: #ffedd5;
+  --color-warmth-200: #fed7aa;
+  --color-warmth-300: #fdba74;
+  --color-warmth-400: #fb923c;
+  --color-warmth-500: #f97316;
+  --color-warmth-600: #ea580c;
+  --color-warmth-700: #c2410c;
+  --color-warmth-800: #9a3412;
+  --color-warmth-900: #7c2d12;
+
+  /* 🌌 Wisdom Colors - 지식의 깊이 */
+  --color-wisdom-50: #faf5ff;
+  --color-wisdom-100: #f3e8ff;
+  --color-wisdom-200: #e9d5ff;
+  --color-wisdom-300: #d8b4fe;
+  --color-wisdom-400: #c084fc;
+  --color-wisdom-500: #a855f7;
+  --color-wisdom-600: #9333ea;
+  --color-wisdom-700: #7e22ce;
+  --color-wisdom-800: #6b21a8;
+  --color-wisdom-900: #581c87;
+
+  /* 🌿 Growth Colors - 성장의 초록 */
+  --color-growth-50: #f0fdf4;
+  --color-growth-100: #dcfce7;
+  --color-growth-500: #22c55e;
+  --color-growth-600: #16a34a;
+  --color-growth-700: #15803d;
+
+  /* Primary (Wisdom Purple) */
+  --color-primary: #a855f7;
   --color-primary-foreground: #ffffff;
-  
+
   /* Background */
   --color-background: #ffffff;
   --color-foreground: #111827;
-  
+
   /* Card */
   --color-card: #ffffff;
   --color-card-foreground: #111827;
-  
+
   /* Muted */
   --color-muted: #f3f4f6;
   --color-muted-foreground: #6b7280;
-  
-  /* Accent */
-  --color-accent: #eff6ff;
-  --color-accent-foreground: #1e40af;
-  
+
+  /* Accent (Warmth Orange) */
+  --color-accent: #fff7ed;
+  --color-accent-foreground: #ea580c;
+
   /* Border & Input */
   --color-border: #e5e7eb;
   --color-input: #e5e7eb;
-  --color-ring: #3b82f6;
-  
+  --color-ring: #f97316;
+
   /* Destructive */
   --color-destructive: #ef4444;
   --color-destructive-foreground: #ffffff;
-  
+
   /* Secondary */
-  --color-secondary: #f9fafb;
-  --color-secondary-foreground: #374151;
-  
+  --color-secondary: #faf5ff;
+  --color-secondary-foreground: #7e22ce;
+
   /* Radius */
-  --radius-lg: 0.75rem;
-  --radius-md: 0.5rem;
-  --radius-sm: 0.25rem;
+  --radius-lg: 1.25rem;
+  --radius-md: 1rem;
+  --radius-sm: 0.75rem;
 }
 
 /* Base Styles */
@@ -67,30 +98,94 @@
 
 /* Utility Classes */
 @layer utilities {
-  /* 그라데이션 배경 */
-  .bg-gradient-primary {
-    background: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%);
+  /* 🌈 그라데이션 배경 */
+  .bg-gradient-hero {
+    background: linear-gradient(135deg, #f97316 0%, #ea580c 50%, #dc2626 100%);
   }
-  
-  .bg-gradient-subtle {
-    background: linear-gradient(135deg, #eff6ff 0%, #ffffff 50%, #f5f3ff 100%);
+
+  .bg-gradient-purple {
+    background: linear-gradient(135deg, #c084fc 0%, #a855f7 50%, #9333ea 100%);
   }
-  
-  /* 그림자 */
-  .shadow-soft {
-    box-shadow: 0 2px 8px -2px rgba(0, 0, 0, 0.08), 0 4px 16px -4px rgba(0, 0, 0, 0.06);
+
+  .bg-gradient-warmth {
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 50%, #fcd34d 100%);
   }
-  
-  .shadow-card {
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 4px 12px rgba(0, 0, 0, 0.04);
+
+  .bg-gradient-soft {
+    background: linear-gradient(135deg, #fff7ed 0%, #fef3c7 25%, #fae8ff 75%, #f3e8ff 100%);
   }
-  
-  /* 텍스트 그라데이션 */
-  .text-gradient {
-    background: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%);
+
+  /* 🎭 그림자 시스템 */
+  .shadow-premium {
+    box-shadow:
+      0 2px 4px rgba(0, 0, 0, 0.02),
+      0 4px 8px rgba(0, 0, 0, 0.03),
+      0 8px 16px rgba(0, 0, 0, 0.04),
+      0 16px 32px rgba(0, 0, 0, 0.05);
+  }
+
+  .shadow-glow-warmth {
+    box-shadow: 0 8px 32px rgba(249, 115, 22, 0.2);
+  }
+
+  .shadow-glow-purple {
+    box-shadow: 0 8px 32px rgba(168, 85, 247, 0.25);
+  }
+
+  /* 🪟 Glass Effect */
+  .glass {
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    box-shadow:
+      0 8px 32px rgba(0, 0, 0, 0.1),
+      inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  }
+
+  /* ✨ 반짝임 효과 */
+  .shimmer {
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.6) 50%,
+      transparent 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 3s infinite linear;
+  }
+
+  @keyframes shimmer {
+    0% {
+      background-position: 200% 0;
+    }
+    100% {
+      background-position: -200% 0;
+    }
+  }
+
+  /* 🎨 텍스트 그라데이션 */
+  .text-gradient-warmth {
+    background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
+  }
+
+  .text-gradient-purple {
+    background: linear-gradient(135deg, #a855f7 0%, #9333ea 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* 💫 애니메이션 퍼포먼스 최적화 */
+  .will-change-transform {
+    will-change: transform;
+  }
+
+  .gpu-accelerated {
+    transform: translateZ(0);
+    backface-visibility: hidden;
   }
 }
 
