@@ -342,11 +342,15 @@ export default function HomePage() {
                 placeholder={config.placeholder}
                 className="pl-12 pr-24 h-14 rounded-2xl border-2 border-gray-100 bg-white shadow-md focus:border-purple-200 focus:ring-purple-100 text-base font-medium transition-all"
               />
-              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+              <motion.div 
+                className="absolute right-2 top-1/2 -translate-y-1/2"
+                whileHover={{ scale: 1.02 }} 
+                whileTap={{ scale: 0.98 }}
+              >
                 <Button
                   type="submit"
                   disabled={loading || !searchQuery.trim()}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 h-10 px-5 rounded-xl bg-gradient-purple text-white text-sm font-bold shadow-glow-purple"
+                  className="h-10 px-5 rounded-xl bg-gradient-purple text-white text-sm font-bold shadow-glow-purple"
                 >
                   {loading ? "찾는 중..." : "찾기"}
                 </Button>
