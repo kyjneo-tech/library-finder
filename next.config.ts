@@ -63,14 +63,14 @@ const nextConfig: NextConfig = {
             value: "camera=(), microphone=(), geolocation=(self), interest-cohort=()",
           },
           // HTTPS 강제 (프로덕션 환경에서만 활성화)
-          ...(process.env.NODE_ENV === "production"
-            ? [
-                {
-                  key: "Strict-Transport-Security",
-                  value: "max-age=31536000; includeSubDomains",
-                },
-              ]
-            : []),
+          // ...(process.env.NODE_ENV === "production"
+          //   ? [
+          //       {
+          //         key: "Strict-Transport-Security",
+          //         value: "max-age=31536000; includeSubDomains",
+          //       },
+          //     ]
+          //   : []),
           // Content Security Policy (단계적 적용)
           {
             key: "Content-Security-Policy",
@@ -86,7 +86,6 @@ const nextConfig: NextConfig = {
               "base-uri 'self'",
               "form-action 'self'",
               "frame-ancestors 'none'",
-              "upgrade-insecure-requests",
             ].join("; "),
           },
         ],

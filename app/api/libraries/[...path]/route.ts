@@ -83,7 +83,19 @@ export async function GET(
       );
     }
 
-    const data = await response.json();
+    const text = await response.text();
+    if (!text) {
+        console.error(`[API Proxy] Empty response from ${url} (Status: ${response.status})`);
+        return NextResponse.json({ error: "Empty response from upstream API" }, { status: 502 });
+    }
+
+    let data;
+    try {
+        data = JSON.parse(text);
+    } catch (error) {
+        console.error(`[API Proxy] Invalid JSON from ${url}:`, text.slice(0, 200));
+        return NextResponse.json({ error: "Invalid JSON response" }, { status: 502 });
+    }
     
     // CDN 캐시 헤더 설정 (클라이언트/CDN 측 캐싱)
     const headers: Record<string, string> = {
