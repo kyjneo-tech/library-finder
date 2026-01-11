@@ -73,6 +73,11 @@ export const REGIONS: RegionData[] = [
         { code: "31041", name: "만안구", latitude: 37.4040, longitude: 126.9157 },
         { code: "31042", name: "동안구", latitude: 37.3908, longitude: 126.9610 }
     ]},
+    { code: "31050", name: "부천시", latitude: 37.5034, longitude: 126.7660, districts: [
+        { code: "31051", name: "원미구", latitude: 37.4860, longitude: 126.7820 },
+        { code: "31052", name: "소사구", latitude: 37.4820, longitude: 126.7950 },
+        { code: "31053", name: "오정구", latitude: 37.5250, longitude: 126.7780 }
+    ]},
     { code: "31090", name: "안산시", latitude: 37.3217, longitude: 126.8309, districts: [
         { code: "31091", name: "상록구", latitude: 37.3060, longitude: 126.8510 },
         { code: "31092", name: "단원구", latitude: 37.3197, longitude: 126.8115 }
@@ -365,4 +370,59 @@ export function findSubRegionByCode(dtlRegionCode: string): { region: RegionData
     }
   }
   return undefined;
+}
+
+/**
+ * [자동 검증 로직] 
+ * 구(Gu) 단위 정보가 반드시 있어야 하는 주요 시 목록
+ * 이 목록에 있는 도시가 districts를 가지고 있지 않으면 경고/에러를 발생시킵니다.
+ */
+const REQUIRED_DISTRICTS = [
+  { code: "31010", name: "수원시" },
+  { code: "31020", name: "성남시" },
+  { code: "31040", name: "안양시" },
+  { code: "31050", name: "부천시" },
+  { code: "31090", name: "안산시" },
+  { code: "31100", name: "고양시" },
+  { code: "31190", name: "용인시" },
+  { code: "33010", name: "청주시" },
+  { code: "34010", name: "천안시" },
+  { code: "35010", name: "전주시" },
+  { code: "37010", name: "포항시" },
+  { code: "38110", name: "창원시" },
+];
+
+export function validateRegions(): { success: boolean; errors: string[] } {
+  const errors: string[] = [];
+
+  REQUIRED_DISTRICTS.forEach((target) => {
+    let found = false;
+    for (const region of REGIONS) {
+      const sub = region.subRegions?.find(s => s.code === target.code);
+      if (sub) {
+        if (!sub.districts || sub.districts.length === 0) {
+          errors.push(`${target.name}(${target.code})에 구(Gu) 단위 정보가 없습니다.`);
+        }
+        found = true;
+        break;
+      }
+    }
+    if (!found) {
+      errors.push(`${target.name}(${target.code}) 지역 데이터 자체가 존재하지 않습니다.`);
+    }
+  });
+
+  return {
+    success: errors.length === 0,
+    errors,
+  };
+}
+
+// 개발 모드에서 데이터 자동 검증 실행
+if (process.env.NODE_ENV === "development") {
+  const validation = validateRegions();
+  if (!validation.success) {
+    console.error("❌ [Region Data Error] 지역 데이터에 결함이 발견되었습니다:");
+    validation.errors.forEach(err => console.error(`  - ${err}`));
+  }
 }
