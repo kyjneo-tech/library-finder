@@ -88,7 +88,7 @@ export default function RootLayout({
         <Footer />
         <Toaster position="top-center" />
         <Script
-          src={`//dapi.kakao.com/v2/maps/sdk.js?appkey=${process.env.NEXT_PUBLIC_KAKAO_MAP_KEY}&autoload=false&libraries=services`}
+          src={`http://dapi.kakao.com/v2/maps/sdk.js?appkey=${process.env.NEXT_PUBLIC_KAKAO_MAP_KEY}&autoload=false&libraries=services`}
           strategy="beforeInteractive"
         />
         {/* 구글 애드센스 스크립트 (승인 후 활성화) */}
