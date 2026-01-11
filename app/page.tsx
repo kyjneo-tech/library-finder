@@ -392,13 +392,24 @@ export default function HomePage() {
             {usageData?.loanGrps && usageData.loanGrps.length > 0 && (
               <div className="mt-6">
                 <h4 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-3 px-1">이 책, 누가 좋아할까요?</h4>
-                <div className="flex flex-wrap gap-2">
-                  {usageData.loanGrps.slice(0, 3).map((grp: any, i: number) => (
-                    <div key={i} className="bg-white border border-gray-100 px-4 py-2 rounded-xl shadow-sm">
-                      <p className="text-[10px] text-gray-400 font-bold">{grp.gender === '0' ? '남성' : '여성'} {grp.age}대</p>
-                      <p className="text-sm font-black text-gray-700">인기 {grp.ranking}위</p>
-                    </div>
-                  ))}
+                <div className="grid grid-cols-3 gap-2">
+                  {usageData.loanGrps.slice(0, 3).map((grp: any, i: number) => {
+                    const gender = grp.gender === '0' ? '남성' : '여성';
+                    const age = grp.age ? `${grp.age}대` : '';
+                    const ranking = grp.ranking ? `${grp.ranking}위` : '';
+                    
+                    if (!age && !ranking) return null;
+
+                    return (
+                      <div key={i} className="bg-gradient-to-br from-white to-gray-50 border border-gray-100 p-3 rounded-2xl shadow-sm flex flex-col items-center text-center">
+                        <span className={`text-[10px] font-black px-2 py-0.5 rounded-full mb-1 ${grp.gender === '0' ? 'bg-blue-50 text-blue-500' : 'bg-pink-50 text-pink-500'}`}>
+                          {gender} {age}
+                        </span>
+                        <p className="text-sm font-black text-gray-800">{ranking}</p>
+                        <p className="text-[9px] text-gray-400 font-bold mt-1">대출 인기</p>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}
