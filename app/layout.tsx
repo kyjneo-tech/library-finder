@@ -59,6 +59,7 @@ export const metadata: Metadata = {
     google: "lgrYKoxQ9rWQHtQEBWV37D8ccvFxt_3fxXJiHcqme7w",
     other: {
       "naver-site-verification": "naver-site-verification-code", // 네이버 서치 어드바이저 코드 입력 필요
+      "google-adsense-account": "ca-pub-4234312634957489",
     },
   },
   alternates: {
@@ -83,13 +84,12 @@ export default function RootLayout({
           src={`https://dapi.kakao.com/v2/maps/sdk.js?appkey=${process.env.NEXT_PUBLIC_KAKAO_MAP_KEY}&autoload=false&libraries=services`}
           strategy="beforeInteractive"
         />
-        {/* 구글 애드센스 스크립트 (승인 후 활성화) */}
-        {/* <Script
+        <Script
           async
-          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXXXXXXXXXXXXXXX"
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4234312634957489"
           crossOrigin="anonymous"
           strategy="afterInteractive"
-        /> */}
+        />
       </body>
     </html>
   );
