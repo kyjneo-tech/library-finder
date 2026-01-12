@@ -58,7 +58,7 @@ export const metadata: Metadata = {
   verification: {
     google: "lgrYKoxQ9rWQHtQEBWV37D8ccvFxt_3fxXJiHcqme7w",
     other: {
-      "naver-site-verification": "naver-site-verification-code", // 네이버 서치 어드바이저 코드 입력 필요
+      "naver-site-verification": "9d8a4cc57e00123b69ccce9581b98158dae30924",
       "google-adsense-account": "ca-pub-4234312634957489",
     },
   },
