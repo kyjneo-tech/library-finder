@@ -725,12 +725,14 @@ export default function HomePage() {
                               )}
                             </div>
                             {lib.address && <div className="flex items-center gap-1 text-gray-400 mb-3"><MapPin className="w-3.5 h-3.5 shrink-0" /><p className="text-xs truncate font-bold">{lib.address}</p></div>}
-                            <div className="flex flex-wrap gap-2 mb-4">
-                               {(() => {
-                                 const status = getOperatingStatus(lib.operatingTime, lib.closed);
-                                 return (
-                                   <span className={cn(
-                                     "text-[10px] px-2 py-1 rounded-lg font-black border",
+                                                         <div className="flex flex-wrap gap-2 mb-4">
+                                                           {(() => {
+                                                             const status = getOperatingStatus(lib.operatingTime, lib.closed);
+                                                             if (status.status === 'UNKNOWN') return null;
+                                                             return (
+                                                               <span className={cn(
+                                                                 "text-[10px] px-2 py-1 rounded-lg font-black border",
+                            
                                      status.status === 'OPEN' ? "bg-green-50 text-green-600 border-green-100" :
                                      status.status === 'CLOSED_DAY' ? "bg-red-50 text-red-600 border-red-100" :
                                      "bg-gray-50 text-gray-500 border-gray-100"
