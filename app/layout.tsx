@@ -56,7 +56,7 @@ export const metadata: Metadata = {
     description: "가까운 도서관 대출 가능 여부 실시간 조회 & 맞춤 책 추천",
   },
   verification: {
-    google: "google-site-verification-code", // 구글 서치 콘솔 코드 입력 필요
+    google: "lgrYKoxQ9rWQHtQEBWV37D8ccvFxt_3fxXJiHcqme7w",
     other: {
       "naver-site-verification": "naver-site-verification-code", // 네이버 서치 어드바이저 코드 입력 필요
     },
