@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { Search, MapPin, BookOpen, Library as LibraryIcon, CheckCircle2, XCircle, X, ChevronRight, TrendingUp } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { RegionSelector } from "@/features/region-selector/ui/region-selector";
@@ -36,6 +36,7 @@ export default function HomePage() {
   const [showSmartFinder, setShowSmartFinder] = useState(false);
   const [serviceFilter, setServiceFilter] = useState<'all' | 'chaekium' | 'chaekbada'>('all');
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const searchResultsRef = useRef<HTMLDivElement>(null);
 
   const { mode, setMode, getSearchConfig } = useSearchMode();
   const config = getSearchConfig();
@@ -92,6 +93,13 @@ export default function HomePage() {
       );
     }
   }, [mounted, setBookSearchUserLocation]);
+
+  // 🛡️ 검색 결과 모달이 열릴 때 스크롤 맨 위로 초기화
+  useEffect(() => {
+    if (showSearchResults && searchResultsRef.current) {
+      searchResultsRef.current.scrollTop = 0;
+    }
+  }, [showSearchResults]);
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -632,7 +640,7 @@ export default function HomePage() {
                 <span className="font-extrabold text-gray-900">검색 결과 ({books.length})</span>
                 <button onClick={() => setShowSearchResults(false)} className="p-2 bg-gray-50 text-gray-400 rounded-full"><X className="w-5 h-5" /></button>
               </div>
-              <div className="overflow-y-auto p-4 space-y-3">
+              <div ref={searchResultsRef} className="overflow-y-auto p-4 space-y-3">
                 {books.map((book) => (
                   <button key={book.isbn} onClick={() => handleBookSelect(book)} className="w-full p-4 bg-gray-50/50 rounded-2xl hover:bg-purple-50 transition-all text-left flex gap-4 group">
                     {book.bookImageURL ? <img src={book.bookImageURL} alt={book.title} className="w-16 h-24 object-cover rounded-xl shadow-md" /> : <div className="w-16 h-24 bg-gray-200 rounded-xl flex items-center justify-center"><BookOpen className="w-8 h-8 text-gray-400" /></div>}
