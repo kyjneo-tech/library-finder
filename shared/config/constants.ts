@@ -1,6 +1,5 @@
 // API 설정
 export const API_CONFIG = {
-  LIBRARY_API_KEY: process.env.NEXT_PUBLIC_LIBRARY_API_KEY || "",
   LIBRARY_API_BASE: process.env.NEXT_PUBLIC_LIBRARY_API_BASE || "http://data4library.kr/api",
   KAKAO_MAP_KEY: process.env.NEXT_PUBLIC_KAKAO_MAP_KEY || "",
 } as const;

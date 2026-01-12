@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { checkRateLimit, getRemainingRequests } from "@/shared/lib/utils/rate-limit";
 
 const BASE_URL = process.env.NEXT_PUBLIC_LIBRARY_API_BASE || "http://data4library.kr/api";
-const API_KEY = process.env.LIBRARY_API_KEY || process.env.NEXT_PUBLIC_LIBRARY_API_KEY;
+const API_KEY = process.env.LIBRARY_API_KEY;
 
 // Rate Limit 설정
 const RATE_LIMIT = 100; // 분당 최대 요청 수
