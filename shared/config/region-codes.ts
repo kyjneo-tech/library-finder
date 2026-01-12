@@ -93,7 +93,6 @@ export const REGIONS: RegionData[] = [
         { code: "31193", name: "수지구", latitude: 37.3298, longitude: 127.0940 }
     ]},
     { code: "31030", name: "의정부시", latitude: 37.7381, longitude: 127.0337 },
-    { code: "31050", name: "부천시", latitude: 37.5034, longitude: 126.7660 },
     { code: "31060", name: "광명시", latitude: 37.4784, longitude: 126.8647 },
     { code: "31070", name: "평택시", latitude: 36.9921, longitude: 127.1129 },
     { code: "31080", name: "동두천시", latitude: 37.9036, longitude: 127.0604 },
