@@ -26,7 +26,7 @@ export const metadata: Metadata = {
     template: "%s | 우리 가족 도서관",
     default: "우리 가족 도서관 | 동네 도서관 대출 현황 및 맞춤 책 추천",
   },
-  description: "안양시, 수원시 등 전국 우리 동네 도서관의 실제 대출 현황을 실시간으로 확인하세요. 0~2세 영유아부터 성인까지 가족 모두를 위한 맞춤형 도서 추천 서비스를 제공합니다.",
+  description: "내 주변 도서관 대출 현황 실시간 확인! 영유아부터 성인까지 온 가족을 위한 맞춤형 도서 추천 서비스를 제공합니다.",
   keywords: ["도서관", "도서관검색", "대출가능조회", "책이음", "책바다", "그림책추천", "베스트셀러", "공공도서관"],
   authors: [{ name: "Library Finder" }],
   creator: "Library Finder",
@@ -44,7 +44,7 @@ export const metadata: Metadata = {
   },
   openGraph: {
     title: "우리 가족 도서관",
-    description: "가까운 도서관에서 지금 바로 빌릴 수 있는 책을 찾아보세요. 대출 가능 여부를 실시간으로 알려드립니다.",
+    description: "내 주변 도서관 대출 현황 실시간 확인! 영유아부터 성인까지 온 가족을 위한 맞춤형 도서 추천 서비스를 제공합니다.",
     url: "https://woorilib.com",
     siteName: "우리 가족 도서관",
     locale: "ko_KR",
@@ -53,7 +53,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "우리 가족 도서관",
-    description: "가까운 도서관 대출 가능 여부 실시간 조회 & 맞춤 책 추천",
+    description: "내 주변 도서관 대출 현황 실시간 확인! 영유아부터 성인까지 온 가족을 위한 맞춤형 도서 추천 서비스를 제공합니다.",
   },
   verification: {
     google: "lgrYKoxQ9rWQHtQEBWV37D8ccvFxt_3fxXJiHcqme7w",
