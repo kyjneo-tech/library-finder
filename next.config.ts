@@ -63,24 +63,24 @@ const nextConfig: NextConfig = {
             value: "camera=(), microphone=(), geolocation=(self), interest-cohort=()",
           },
           // HTTPS 강제 (프로덕션 환경에서만 활성화)
-          // ...(process.env.NODE_ENV === "production"
-          //   ? [
-          //       {
-          //         key: "Strict-Transport-Security",
-          //         value: "max-age=31536000; includeSubDomains",
-          //       },
-          //     ]
-          //   : []),
+          ...(process.env.NODE_ENV === "production"
+            ? [
+                {
+                  key: "Strict-Transport-Security",
+                  value: "max-age=31536000; includeSubDomains",
+                },
+              ]
+            : []),
           // Content Security Policy (단계적 적용)
           {
             key: "Content-Security-Policy",
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://dapi.kakao.com http://dapi.kakao.com *.daumcdn.net https://pagead2.googlesyndication.com",
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://dapi.kakao.com *.daumcdn.net https://pagead2.googlesyndication.com",
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: https: http: *.daumcdn.net *.kakaocdn.net",
               "font-src 'self' data:",
-              "connect-src 'self' https://dapi.kakao.com http://dapi.kakao.com *.daumcdn.net https://openapi.naver.com http://data4library.kr https://*.data4library.kr",
+              "connect-src 'self' https://dapi.kakao.com *.daumcdn.net https://openapi.naver.com http://data4library.kr https://*.data4library.kr",
               "frame-src 'self' https://pagead2.googlesyndication.com",
               "object-src 'none'",
               "base-uri 'self'",
