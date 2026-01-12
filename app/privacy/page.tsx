@@ -1,4 +1,3 @@
-import { Footer } from "@/shared/ui/footer";
 import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
 
@@ -67,8 +66,6 @@ export default function PrivacyPage() {
           </section>
         </div>
       </main>
-
-      <Footer />
     </div>
   );
 }

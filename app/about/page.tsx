@@ -1,4 +1,3 @@
-import { Footer } from "@/shared/ui/footer";
 import { ChevronLeft, Library, BookOpen, Heart, Info } from "lucide-react";
 import Link from "next/link";
 
@@ -66,8 +65,6 @@ export default function AboutPage() {
           </p>
         </div>
       </main>
-
-      <Footer />
     </div>
   );
 }

@@ -1,4 +1,3 @@
-import { Footer } from "@/shared/ui/footer";
 import { ChevronLeft, HelpCircle, CheckCircle2, Bookmark, Lightbulb } from "lucide-react";
 import Link from "next/link";
 
@@ -80,8 +79,6 @@ export default function GuidePage() {
           </section>
         </div>
       </main>
-
-      <Footer />
     </div>
   );
 }
