@@ -24,13 +24,21 @@ export function Footer() {
 
         {/* 링크 및 저작권 */}
         <div className="flex flex-col items-center gap-4">
-          <div className="flex gap-4 text-xs font-medium text-gray-500">
-            <Link href="/privacy" className="hover:text-gray-900 underline underline-offset-2">
-              개인정보처리방침
+          <div className="flex flex-wrap justify-center gap-x-4 gap-y-2 text-xs font-medium text-gray-500">
+            <Link href="/about" className="hover:text-gray-900 underline underline-offset-2">
+              서비스 소개
             </Link>
             <span className="text-gray-300">|</span>
-            <Link href="/" className="hover:text-gray-900">
-              서비스 소개
+            <Link href="/guide" className="hover:text-gray-900 underline underline-offset-2">
+              이용 가이드
+            </Link>
+            <span className="text-gray-300">|</span>
+            <Link href="/terms" className="hover:text-gray-900 underline underline-offset-2">
+              이용약관
+            </Link>
+            <span className="text-gray-300">|</span>
+            <Link href="/privacy" className="hover:text-gray-900 underline underline-offset-2">
+              개인정보처리방침
             </Link>
           </div>
           <p className="text-[10px] text-gray-400">
