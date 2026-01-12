@@ -65,6 +65,11 @@ export const metadata: Metadata = {
   alternates: {
     canonical: "https://woorilib.com",
   },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "우리 가족 도서관",
+  },
 };
 
 export default function RootLayout({
