@@ -228,6 +228,8 @@ export const useBookSearch = create<BookSearchState>((set, get) => ({
                 latitude: lat,
                 longitude: lng,
                 homepage: lib.homepage,
+                operatingTime: lib.operatingTime,
+                closed: lib.closed,
                 hasBook: info?.hasBook ?? true,
                 loanAvailable: info?.loanAvailable ?? false,
                 distance,
@@ -242,6 +244,8 @@ export const useBookSearch = create<BookSearchState>((set, get) => ({
             latitude: lat,
             longitude: lng,
             homepage: lib.homepage,
+            operatingTime: lib.operatingTime,
+            closed: lib.closed,
             hasBook: true,
             loanAvailable: false,
             distance,
@@ -352,6 +356,8 @@ export const useBookSearch = create<BookSearchState>((set, get) => ({
         latitude: lib.latitude ? parseFloat(lib.latitude) : 0,
         longitude: lib.longitude ? parseFloat(lib.longitude) : 0,
         homepage: lib.homepage,
+        operatingTime: lib.operatingTime,
+        closed: lib.closed,
         hasBook: true,
         loanAvailable: false, // 전국 검색은 대출 가능 여부 미확인 (API 호출 최소화)
       }));
@@ -389,6 +395,8 @@ export const useBookSearch = create<BookSearchState>((set, get) => ({
         latitude: lib.latitude ? parseFloat(lib.latitude) : 0,
         longitude: lib.longitude ? parseFloat(lib.longitude) : 0,
         homepage: lib.homepage,
+        operatingTime: lib.operatingTime,
+        closed: lib.closed,
         hasBook: lib.hasBook,
         loanAvailable: lib.loanAvailable,
       }));
