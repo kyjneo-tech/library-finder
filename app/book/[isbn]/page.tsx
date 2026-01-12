@@ -19,12 +19,13 @@ export async function generateMetadata({ params }: BookDetailPageProps): Promise
   }
 
   return {
-    title: `${book.title} - 우리동네 도서관`,
-    description: book.description || `${book.author}의 ${book.title}`,
+    title: `${book.title} - 우리 가족 도서관`,
+    description: book.description || `${book.author}의 ${book.title}. 우리 동네 도서관에서 대출 가능 여부를 확인하세요.`,
     openGraph: {
       title: book.title,
-      description: book.description,
-      images: book.bookImageURL ? [book.bookImageURL] : [],
+      description: book.description || `${book.author}의 ${book.title}`,
+      type: "book",
+      authors: book.author ? [book.author] : [],
     },
   };
 }

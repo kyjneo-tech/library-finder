@@ -45,18 +45,10 @@ export const metadata: Metadata = {
   openGraph: {
     title: "우리 가족 도서관",
     description: "가까운 도서관에서 지금 바로 빌릴 수 있는 책을 찾아보세요. 대출 가능 여부를 실시간으로 알려드립니다.",
-    url: "https://library-finder.vercel.app",
+    url: "https://woorilib.com",
     siteName: "우리 가족 도서관",
     locale: "ko_KR",
     type: "website",
-    images: [
-      {
-        url: "/og-image.png", // public 폴더에 대표 이미지 추가 권장 (1200x630)
-        width: 1200,
-        height: 630,
-        alt: "우리 가족 도서관 미리보기",
-      },
-    ],
   },
   twitter: {
     card: "summary_large_image",
@@ -70,7 +62,7 @@ export const metadata: Metadata = {
     },
   },
   alternates: {
-    canonical: "https://library-finder.vercel.app",
+    canonical: "https://woorilib.com",
   },
 };
 
