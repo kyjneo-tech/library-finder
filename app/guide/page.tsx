@@ -1,4 +1,4 @@
-import { ChevronLeft, HelpCircle, CheckCircle2, Bookmark, Lightbulb } from "lucide-react";
+import { ChevronLeft, ChevronRight, HelpCircle, CheckCircle2, Bookmark, Lightbulb } from "lucide-react";
 import Link from "next/link";
 
 export default function GuidePage() {

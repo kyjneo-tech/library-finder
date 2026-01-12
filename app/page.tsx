@@ -727,7 +727,7 @@ export default function HomePage() {
                             {lib.address && <div className="flex items-center gap-1 text-gray-400 mb-3"><MapPin className="w-3.5 h-3.5 shrink-0" /><p className="text-xs truncate font-bold">{lib.address}</p></div>}
                             <div className="flex flex-wrap gap-2 mb-4">
                                {(() => {
-                                 const status = getOperatingStatus(lib.operatingTime, lib.closedDay);
+                                 const status = getOperatingStatus(lib.operatingTime, lib.closed);
                                  return (
                                    <span className={cn(
                                      "text-[10px] px-2 py-1 rounded-lg font-black border",
