@@ -108,6 +108,12 @@ export default function HomePage() {
     setShowSearchResults(true);
   };
 
+  const handleCloseSearchResults = () => {
+    setShowSearchResults(false);
+    // 🛡️ 모달을 닫을 때 페이지 스크롤을 맨 위로 이동
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   const handleCategorySearch = async (keyword: string, kdc?: string) => {
     setSearchQuery(keyword);
     const regionCode = getRegionCode(); 
@@ -634,11 +640,11 @@ export default function HomePage() {
 
         {showSearchResults && books.length > 0 && (
           <>
-            <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40" onClick={() => setShowSearchResults(false)} />
+            <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40" onClick={handleCloseSearchResults} />
             <div className="fixed inset-x-4 bottom-4 md:inset-x-auto md:left-1/2 md:-translate-x-1/2 md:w-[600px] max-h-[75vh] bg-white rounded-[2.5rem] shadow-2xl z-50 overflow-hidden flex flex-col">
               <div className="sticky top-0 bg-white/80 backdrop-blur-md border-b border-gray-100 px-6 py-4 flex items-center justify-between">
                 <span className="font-extrabold text-gray-900">검색 결과 ({books.length})</span>
-                <button onClick={() => setShowSearchResults(false)} className="p-2 bg-gray-50 text-gray-400 rounded-full"><X className="w-5 h-5" /></button>
+                <button onClick={handleCloseSearchResults} className="p-2 bg-gray-50 text-gray-400 rounded-full"><X className="w-5 h-5" /></button>
               </div>
               <div ref={searchResultsRef} className="overflow-y-auto p-4 space-y-3">
                 {books.map((book) => (
