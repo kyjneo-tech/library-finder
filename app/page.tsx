@@ -110,6 +110,7 @@ export default function HomePage() {
 
   const handleCloseSearchResults = () => {
     setShowSearchResults(false);
+    setSearchQuery(""); // 검색어 초기화
     // 🛡️ 모달을 닫을 때 페이지 스크롤을 맨 위로 이동
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
