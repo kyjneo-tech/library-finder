@@ -21,7 +21,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://library-finder.vercel.app"),
+  metadataBase: new URL("https://woorilib.com"),
   title: {
     template: "%s | 우리 가족 도서관",
     default: "우리 가족 도서관 | 동네 도서관 대출 현황 및 맞춤 책 추천",
