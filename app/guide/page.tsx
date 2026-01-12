@@ -78,6 +78,35 @@ export default function GuidePage() {
             </p>
           </section>
         </div>
+
+        <div className="mt-16 space-y-6">
+          <h2 className="text-xl font-black text-gray-900 px-1">📚 읽어두면 좋은 독서 가이드</h2>
+          <div className="grid grid-cols-1 gap-4">
+            <Link href="/guide/reading-tips" className="p-5 bg-white border border-gray-100 rounded-2xl shadow-sm hover:border-purple-200 transition-all flex items-center justify-between group">
+              <div>
+                <h3 className="font-bold text-gray-900 group-hover:text-purple-600 transition-colors">아이에게 책 읽어주는 5가지 방법</h3>
+                <p className="text-xs text-gray-500 mt-1">부모와 아이가 함께 즐거운 독서 시간을 만드는 팁</p>
+              </div>
+              <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-purple-500" />
+            </Link>
+
+            <Link href="/guide/age-books" className="p-5 bg-white border border-gray-100 rounded-2xl shadow-sm hover:border-purple-200 transition-all flex items-center justify-between group">
+              <div>
+                <h3 className="font-bold text-gray-900 group-hover:text-purple-600 transition-colors">우리 아이 연령별 권장 도서 리스트</h3>
+                <p className="text-xs text-gray-500 mt-1">0세부터 초등학생까지 꼭 읽어야 할 필독서 안내</p>
+              </div>
+              <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-purple-500" />
+            </Link>
+
+            <Link href="/guide/library-hacks" className="p-5 bg-white border border-gray-100 rounded-2xl shadow-sm hover:border-purple-200 transition-all flex items-center justify-between group">
+              <div>
+                <h3 className="font-bold text-gray-900 group-hover:text-purple-600 transition-colors">전국 도서관 200% 활용하는 꿀팁</h3>
+                <p className="text-xs text-gray-500 mt-1">희망도서 신청부터 문화 프로그램 참여까지</p>
+              </div>
+              <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-purple-500" />
+            </Link>
+          </div>
+        </div>
       </main>
     </div>
   );

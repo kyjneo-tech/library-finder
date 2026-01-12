@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState, useMemo, useCallback, useRef } from "react";
-import { Search, MapPin, BookOpen, Library as LibraryIcon, CheckCircle2, XCircle, X, ChevronRight, TrendingUp } from "lucide-react";
+import { Search, MapPin, BookOpen, Library as LibraryIcon, CheckCircle2, XCircle, X, ChevronRight, TrendingUp, Heart, Bookmark } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useFavoritesStore } from "@/features/favorites/lib/use-favorites-store";
 import { RegionSelector } from "@/features/region-selector/ui/region-selector";
 import { useRegionStore } from "@/features/region-selector/lib/use-region-store";
 import { useBookSearch } from "@/features/book-search/lib/use-book-search";
@@ -21,6 +22,7 @@ import { FamilyCategories } from "@/features/recommendations/ui/family-categorie
 import { FamilyPopularBooks } from "@/features/recommendations/ui/family-popular-books";
 import { bookRepository } from "@/entities/book/repository/book.repository.impl";
 import { checkLibraryServices } from "@/shared/lib/utils/library-services";
+import { getOperatingStatus } from "@/shared/lib/utils/library-status";
 import { formatDistance } from "@/shared/lib/utils/distance";
 import { sanitizeHTML } from "@/shared/lib/utils/sanitize";
 import { fadeInDown, fadeInUp, hoverScale, buttonPress, staggerContainer, staggerItem } from "@/shared/lib/animations/variants";
@@ -223,6 +225,27 @@ export default function HomePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedRegion?.code, selectedSubRegion?.code, selectedDistrict?.code, selectedBook, mounted, serviceFilter]);
 
+  const { addLibrary, removeLibrary, isLibraryFavorite, addBook, removeBook, isBookFavorite, favoriteLibraries, favoriteBooks } = useFavoritesStore();
+
+  const toggleLibraryFavorite = (e: React.MouseEvent, lib: any) => {
+    e.stopPropagation();
+    if (isLibraryFavorite(lib.libCode)) {
+      removeLibrary(lib.libCode);
+    } else {
+      addLibrary(lib);
+    }
+  };
+
+  const toggleBookFavorite = (e: React.MouseEvent, book: Book) => {
+    e.stopPropagation();
+    const isbn = book.isbn13 || book.isbn;
+    if (isBookFavorite(isbn)) {
+      removeBook(isbn);
+    } else {
+      addBook(book);
+    }
+  };
+
   if (!mounted) return null;
 
   return (
@@ -377,6 +400,60 @@ export default function HomePage() {
       </motion.header>
 
       <main className="max-w-2xl mx-auto pb-20 relative z-10">
+        {/* 💖 내 찜 목록 섹션 */}
+        {(favoriteLibraries.length > 0 || favoriteBooks.length > 0) && !selectedBook && !showSearchResults && (
+          <motion.section 
+            className="mx-4 mt-6 space-y-4"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+          >
+            <div className="flex items-center justify-between px-2">
+              <h2 className="text-lg font-black text-gray-900 flex items-center gap-2">
+                <Heart className="w-5 h-5 text-red-500 fill-red-500" />
+                <span>나의 찜 목록</span>
+              </h2>
+            </div>
+            
+            <div className="flex gap-4 overflow-x-auto pb-2 no-scrollbar px-1">
+              {/* 찜한 도서관 */}
+              {favoriteLibraries.map((lib) => (
+                <motion.button
+                  key={lib.libCode}
+                  onClick={() => {
+                    // 지도 위치 이동 및 해당 도서관 정보 로드 로직 (필요시 추가)
+                    setSelectedLibrary(lib);
+                    window.scrollTo({ top: 400, behavior: 'smooth' });
+                  }}
+                  className="flex-shrink-0 w-40 p-4 bg-white rounded-2xl border border-purple-100 shadow-sm text-left hover:border-purple-300 transition-all"
+                  whileHover={{ y: -4 }}
+                >
+                  <div className="w-8 h-8 bg-purple-50 rounded-lg flex items-center justify-center mb-2">
+                    <LibraryIcon className="w-4 h-4 text-purple-600" />
+                  </div>
+                  <p className="text-xs font-black text-gray-900 line-clamp-2 leading-tight">{lib.libName}</p>
+                  <p className="text-[10px] text-gray-400 font-bold mt-1">도서관 바로가기</p>
+                </motion.button>
+              ))}
+
+              {/* 찜한 책 */}
+              {favoriteBooks.map((book) => (
+                <motion.button
+                  key={book.isbn13 || book.isbn}
+                  onClick={() => handleBookSelect(book)}
+                  className="flex-shrink-0 w-40 p-4 bg-white rounded-2xl border border-orange-100 shadow-sm text-left hover:border-orange-300 transition-all"
+                  whileHover={{ y: -4 }}
+                >
+                  <div className="w-8 h-8 bg-orange-50 rounded-lg flex items-center justify-center mb-2">
+                    <BookOpen className="w-4 h-4 text-orange-600" />
+                  </div>
+                  <p className="text-xs font-black text-gray-900 line-clamp-2 leading-tight">{book.title}</p>
+                  <p className="text-[10px] text-gray-400 font-bold mt-1">{book.author}</p>
+                </motion.button>
+              ))}
+            </div>
+          </motion.section>
+        )}
+
         {selectedBook && (
           <div className="mx-4 mt-6 p-6 bg-white rounded-[2rem] border-2 border-purple-50 shadow-xl shadow-purple-100/50 relative transition-all animate-in zoom-in-95 duration-300">
             <button onClick={clearLibraries} className="absolute -top-2 -right-2 p-2 bg-white text-gray-400 hover:text-gray-600 shadow-lg border border-gray-100 rounded-full transition-all hover:rotate-90"><X className="w-5 h-5" /></button>
@@ -394,7 +471,22 @@ export default function HomePage() {
                    {selectedBook.className && <span className="bg-purple-100 text-purple-700 text-[10px] font-black px-2 py-0.5 rounded-md">{selectedBook.className}</span>}
                    {selectedBook.loanCnt && <span className="bg-orange-100 text-orange-700 text-[10px] font-black px-2 py-0.5 rounded-md">누적 대출 {selectedBook.loanCnt.toLocaleString()}회</span>}
                 </div>
-                <h3 className="font-extrabold text-2xl text-gray-900 leading-tight mb-2 line-clamp-2">{selectedBook.title}</h3>
+                <div className="flex items-center justify-between gap-4 mb-2">
+                  <h3 className="font-extrabold text-2xl text-gray-900 leading-tight line-clamp-2">{selectedBook.title}</h3>
+                  <motion.button
+                    onClick={(e) => toggleBookFavorite(e, selectedBook)}
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                    className={cn(
+                      "p-3 rounded-2xl border-2 transition-all shrink-0",
+                      isBookFavorite(selectedBook.isbn13 || selectedBook.isbn)
+                        ? "bg-purple-100 border-purple-200 text-purple-600"
+                        : "bg-gray-50 border-gray-100 text-gray-400 hover:border-purple-200"
+                    )}
+                  >
+                    <Bookmark className={cn("w-6 h-6", isBookFavorite(selectedBook.isbn13 || selectedBook.isbn) && "fill-current")} />
+                  </motion.button>
+                </div>
                 <p className="text-base font-bold text-purple-600 mb-2">{selectedBook.author}</p>
                 <div className="flex items-center gap-2 text-xs font-medium text-gray-400">
                   <span className="bg-gray-100 px-2 py-0.5 rounded-md">{selectedBook.publisher}</span>
@@ -612,6 +704,19 @@ export default function HomePage() {
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-1">
                               <h3 className="font-black text-gray-900 text-lg group-hover:text-purple-600 transition-colors">{lib.libName}</h3>
+                              <motion.button
+                                onClick={(e) => toggleLibraryFavorite(e, lib)}
+                                whileHover={{ scale: 1.2 }}
+                                whileTap={{ scale: 0.9 }}
+                                className="p-1.5"
+                              >
+                                <Heart 
+                                  className={cn(
+                                    "w-5 h-5 transition-colors",
+                                    isLibraryFavorite(lib.libCode) ? "fill-red-500 text-red-500" : "text-gray-300 hover:text-red-400"
+                                  )} 
+                                />
+                              </motion.button>
                               {/* 🛡️ 거리 표시 */}
                               {lib.distance !== undefined && (
                                 <span className="text-[10px] bg-blue-50 text-blue-600 px-2 py-0.5 rounded-md font-black border border-blue-100">
@@ -621,6 +726,19 @@ export default function HomePage() {
                             </div>
                             {lib.address && <div className="flex items-center gap-1 text-gray-400 mb-3"><MapPin className="w-3.5 h-3.5 shrink-0" /><p className="text-xs truncate font-bold">{lib.address}</p></div>}
                             <div className="flex flex-wrap gap-2 mb-4">
+                               {(() => {
+                                 const status = getOperatingStatus(lib.operatingTime, lib.closedDay);
+                                 return (
+                                   <span className={cn(
+                                     "text-[10px] px-2 py-1 rounded-lg font-black border",
+                                     status.status === 'OPEN' ? "bg-green-50 text-green-600 border-green-100" :
+                                     status.status === 'CLOSED_DAY' ? "bg-red-50 text-red-600 border-red-100" :
+                                     "bg-gray-50 text-gray-500 border-gray-100"
+                                   )}>
+                                     {status.status === 'OPEN' ? '🟢' : '⚪️'} {status.label}
+                                   </span>
+                                 );
+                               })()}
                                <span className="text-[10px] bg-purple-50 text-purple-600 px-2 py-1 rounded-lg font-black border border-purple-100">평일 오전 방문 권장 ✨</span>
                                {services.isChaekium && <span className="text-[10px] bg-amber-50 text-amber-600 px-2 py-1 rounded-lg font-black border border-amber-100">💳 책이음</span>}
                                {services.isChaekbada && <span className="text-[10px] bg-emerald-50 text-emerald-600 px-2 py-1 rounded-lg font-black border border-emerald-100">🌊 책바다</span>}
