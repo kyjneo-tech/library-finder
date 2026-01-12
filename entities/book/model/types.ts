@@ -37,6 +37,8 @@ export const BookAvailabilitySchema = z.object({
   homepage: z.string().optional(), // 홈페이지 URL (교차 검증용)
   address: z.string().optional(), // 주소
   tel: z.string().optional(), // 전화번호
+  operatingTime: z.string().optional(), // 운영시간
+  closed: z.string().optional(), // 휴관일
 });
 
 export type BookAvailability = z.infer<typeof BookAvailabilitySchema>;
