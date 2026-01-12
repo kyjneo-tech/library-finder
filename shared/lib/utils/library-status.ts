@@ -32,8 +32,23 @@ export function getOperatingStatus(operatingTime?: string, closedDays?: string):
 
   // 2. 운영 시간 체크 (예: "09:00~22:00" 또는 "평일 09:00~22:00, 주말 09:00~18:00")
   try {
-    // 가장 단순한 형태인 "HH:mm~HH:mm" 검색
-    const timeMatch = operatingTime.match(/(\d{2}):(\d{2})\s*~\s*(\d{2}):(\d{2})/);
+    const isWeekend = day === 0 || day === 6;
+    let targetTimeStr = operatingTime;
+
+    // "평일 09:00~22:00, 주말 09:00~18:00" 같은 형태 분리
+    if (operatingTime.includes('평일') || operatingTime.includes('주말')) {
+      const parts = operatingTime.split(/[,/]/);
+      const weekendPart = parts.find(p => p.includes('주말') || p.includes('토요일') || p.includes('일요일'));
+      const weekdayPart = parts.find(p => p.includes('평일'));
+      
+      if (isWeekend && weekendPart) {
+        targetTimeStr = weekendPart;
+      } else if (!isWeekend && weekdayPart) {
+        targetTimeStr = weekdayPart;
+      }
+    }
+
+    const timeMatch = targetTimeStr.match(/(\d{2}):(\d{2})\s*~\s*(\d{2}):(\d{2})/);
     
     if (timeMatch) {
       const openTime = parseInt(timeMatch[1]) * 100 + parseInt(timeMatch[2]);
