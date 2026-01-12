@@ -662,7 +662,7 @@ export default function HomePage() {
           </>
         )}
 
-        {!selectedBook && !showSearchResults && (
+        {!selectedBook && (
           mode === 'kids' ? (
             <div className="animate-in fade-in slide-in-from-bottom-4">
               <KidsRecommendations onBookSelect={handleBookSelect} />
