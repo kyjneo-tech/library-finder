@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import { useState, useEffect } from "react";
-import { DEFAULT_LOCATION } from "@/shared/config/constants";
+import { useState, useEffect } from 'react';
+import { DEFAULT_LOCATION } from '@/shared/config/constants';
 
 interface GeolocationState {
   latitude: number;
@@ -27,7 +27,7 @@ export function useGeolocation() {
       setState((prev) => ({
         ...prev,
         loading: false,
-        error: "Geolocation is not supported by your browser",
+        error: 'Geolocation is not supported by your browser',
       }));
       return;
     }

@@ -1,12 +1,12 @@
-"use client";
+'use client';
 
-import { useState, useEffect } from "react";
-import { Search, X } from "lucide-react";
-import { Input } from "@/shared/ui/input";
-import { Button } from "@/shared/ui/button";
-import { useDebounce } from "@/shared/lib/hooks/use-debounce";
-import { useBookSearch } from "../lib/use-book-search";
-import { cn } from "@/shared/lib/cn";
+import { useState, useEffect } from 'react';
+import { Search, X } from 'lucide-react';
+import { Input } from '@/shared/ui/input';
+import { Button } from '@/shared/ui/button';
+import { useDebounce } from '@/shared/lib/hooks/use-debounce';
+import { useBookSearch } from '../lib/use-book-search';
+import { cn } from '@/shared/lib/cn';
 
 interface SearchBarProps {
   className?: string;
@@ -16,10 +16,10 @@ interface SearchBarProps {
 
 export function SearchBar({
   className,
-  placeholder = "책 제목, 저자 검색...",
+  placeholder = '책 제목, 저자 검색...',
   autoSearch = true,
 }: SearchBarProps) {
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState('');
   const debouncedQuery = useDebounce(query, 500);
   const { searchBooks, clearSearch } = useBookSearch();
 
@@ -32,7 +32,7 @@ export function SearchBar({
   }, [debouncedQuery, autoSearch, searchBooks, clearSearch]);
 
   const handleClear = () => {
-    setQuery("");
+    setQuery('');
     clearSearch();
   };
 
@@ -46,7 +46,7 @@ export function SearchBar({
   return (
     <form
       onSubmit={handleSubmit}
-      className={cn("relative w-full flex items-center gap-2", className)}
+      className={cn('relative w-full flex items-center gap-2', className)}
     >
       <div className="relative flex-1">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />

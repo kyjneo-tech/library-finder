@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from 'zod';
 
 /**
  * 도서관 기본 정보
@@ -19,6 +19,14 @@ export const LibrarySchema = z.object({
 });
 
 export type Library = z.infer<typeof LibrarySchema>;
+
+export interface LibraryWithBookInfo extends Library {
+  hasBook?: boolean;
+  loanAvailable?: boolean;
+  homepage?: string;
+  distance?: number; // 사용자 위치 기준 거리 (미터)
+  availabilityChecked?: boolean; // 대출가능 여부 확인 완료 여부 (내부 사용)
+}
 
 /**
  * 도서관 검색 필터

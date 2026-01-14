@@ -3,11 +3,11 @@
  * 책의 대출 가능 여부와 도서관 정보를 표시합니다.
  */
 
-"use client";
+'use client';
 
-import { MapPin, CheckCircle2, XCircle } from "lucide-react";
-import { cn } from "@/shared/lib/cn";
-import { checkLibraryServices } from "@/shared/lib/utils/library-services";
+import { MapPin, CheckCircle2, XCircle } from 'lucide-react';
+import { cn } from '@/shared/lib/cn';
+import { checkLibraryServices } from '@/shared/lib/utils/library-services';
 
 export interface BookLibraryCardProps {
   libCode: string;
@@ -70,10 +70,10 @@ export function BookLibraryCard({
         </div>
         <div
           className={cn(
-            "flex flex-col items-center gap-1.5 px-5 py-3 rounded-2xl text-[11px] font-black shrink-0 border-2 shadow-sm transition-all",
+            'flex flex-col items-center gap-1.5 px-5 py-3 rounded-2xl text-[11px] font-black shrink-0 border-2 shadow-sm transition-all',
             loanAvailable
-              ? "bg-green-50 text-green-700 border-green-100"
-              : "bg-red-50 text-red-600 border-red-100"
+              ? 'bg-green-50 text-green-700 border-green-100'
+              : 'bg-red-50 text-red-600 border-red-100'
           )}
         >
           {loanAvailable ? (

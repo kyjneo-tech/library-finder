@@ -1,15 +1,21 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import { X, ChevronRight, Sparkles } from "lucide-react";
-import { Button } from "@/shared/ui/button";
-import { cn } from "@/shared/lib/cn";
+import { useState } from 'react';
+import { X, ChevronRight, Sparkles } from 'lucide-react';
+import { Button } from '@/shared/ui/button';
+import { cn } from '@/shared/lib/cn';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/shared/ui/dialog';
 import {
   SMART_QUESTIONS,
   SmartAnswers,
   QuestionOption,
   buildSearchQuery,
-} from "../lib/smart-questions";
+} from '../lib/smart-questions';
 
 interface SmartFinderModalProps {
   isOpen: boolean;
@@ -23,6 +29,12 @@ export function SmartFinderModal({ isOpen, onClose, onSearch }: SmartFinderModal
 
   const currentQuestion = SMART_QUESTIONS[step];
   const totalSteps = SMART_QUESTIONS.length;
+
+  const handleClose = () => {
+    setStep(0);
+    setAnswers({});
+    onClose();
+  };
 
   const handleSelectOption = (option: QuestionOption) => {
     const newAnswers = {
@@ -42,41 +54,27 @@ export function SmartFinderModal({ isOpen, onClose, onSearch }: SmartFinderModal
     }
   };
 
-  const handleClose = () => {
-    setStep(0);
-    setAnswers({});
-    onClose();
-  };
-
   const handleBack = () => {
     if (step > 0) {
       setStep(step - 1);
     }
   };
 
-  if (!isOpen) return null;
-
   return (
-    <>
-      {/* 배경 오버레이 */}
-      <div
-        className="fixed inset-0 bg-black/40 z-50 backdrop-blur-sm"
-        onClick={handleClose}
-      />
-
-      {/* 모달 */}
-      <div className="fixed inset-x-4 top-[20%] max-h-[70vh] bg-white rounded-2xl shadow-2xl z-50 overflow-hidden">
+    <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
+      <DialogContent className="sm:max-w-md p-0 overflow-hidden gap-0 border-none shadow-2xl [&>button]:hidden">
+        <DialogHeader className="sr-only">
+          <DialogTitle>우리 아이 맞춤 책 찾기</DialogTitle>
+        </DialogHeader>
+        
         {/* 헤더 */}
-        <div className="sticky top-0 bg-gradient-to-r from-purple-500 to-pink-500 text-white px-4 py-4">
+        <div className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-4 py-4">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <Sparkles className="w-5 h-5" />
               <h2 className="font-bold text-lg">우리 아이 맞춤 책 찾기</h2>
             </div>
-            <button
-              onClick={handleClose}
-              className="text-white/80 hover:text-white"
-            >
+            <button onClick={handleClose} className="text-white/80 hover:text-white transition-colors">
               <X className="w-6 h-6" />
             </button>
           </div>
@@ -87,8 +85,8 @@ export function SmartFinderModal({ isOpen, onClose, onSearch }: SmartFinderModal
               <div
                 key={idx}
                 className={cn(
-                  "flex-1 h-1 rounded-full transition-all",
-                  idx <= step ? "bg-white" : "bg-white/30"
+                  'flex-1 h-1 rounded-full transition-all',
+                  idx <= step ? 'bg-white' : 'bg-white/30'
                 )}
               />
             ))}
@@ -96,17 +94,13 @@ export function SmartFinderModal({ isOpen, onClose, onSearch }: SmartFinderModal
         </div>
 
         {/* 질문 내용 */}
-        <div className="p-6 overflow-y-auto max-h-[calc(70vh-120px)]">
+        <div className="p-6 overflow-y-auto max-h-[60vh]">
           <div className="mb-4">
             <p className="text-sm text-gray-500 mb-2">
               질문 {step + 1}/{totalSteps}
             </p>
-            <h3 className="text-xl font-bold text-gray-900 mb-1">
-              {currentQuestion.question}
-            </h3>
-            <p className="text-sm text-gray-500">
-              하나를 선택해주세요
-            </p>
+            <h3 className="text-xl font-bold text-gray-900 mb-1">{currentQuestion.question}</h3>
+            <p className="text-sm text-gray-500">하나를 선택해주세요</p>
           </div>
 
           {/* 옵션 */}
@@ -122,9 +116,7 @@ export function SmartFinderModal({ isOpen, onClose, onSearch }: SmartFinderModal
                     <p className="font-semibold text-gray-900 group-hover:text-purple-600 transition-colors mb-1">
                       {option.label}
                     </p>
-                    <p className="text-sm text-gray-500">
-                      {option.description}
-                    </p>
+                    <p className="text-sm text-gray-500">{option.description}</p>
                   </div>
                   <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-purple-500 transition-colors" />
                 </div>
@@ -135,17 +127,13 @@ export function SmartFinderModal({ isOpen, onClose, onSearch }: SmartFinderModal
 
         {/* 하단 버튼 */}
         {step > 0 && (
-          <div className="sticky bottom-0 bg-white border-t border-gray-200 px-4 py-3">
-            <Button
-              onClick={handleBack}
-              variant="outline"
-              className="w-full"
-            >
+          <div className="bg-white border-t border-gray-200 px-4 py-3">
+            <Button onClick={handleBack} variant="outline" className="w-full">
               이전 질문으로
             </Button>
           </div>
         )}
-      </div>
-    </>
+      </DialogContent>
+    </Dialog>
   );
 }

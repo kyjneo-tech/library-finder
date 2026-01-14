@@ -1,10 +1,10 @@
-"use client";
+'use client';
 
-import { Library } from "@/entities/library/model/types";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/shared/ui/card";
-import { Badge } from "@/shared/ui/badge";
-import { MapPin, Phone, Clock, ExternalLink } from "lucide-react";
-import Link from "next/link";
+import { Library } from '@/entities/library/model/types';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/shared/ui/card';
+import { Badge } from '@/shared/ui/badge';
+import { MapPin, Phone, Clock, ExternalLink } from 'lucide-react';
+import Link from 'next/link';
 
 interface LibraryCardProps {
   library: Library;

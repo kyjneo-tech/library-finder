@@ -1,7 +1,7 @@
-import { API_CONFIG } from "@/shared/config/constants";
-import { Library, LibrarySearchFilters, LibraryStats, LibrarySchema } from "../model/types";
-import { LibraryRepository } from "./library.repository";
-import { findSubRegionByCode } from "@/shared/config/region-codes";
+import { API_CONFIG } from '@/shared/config/constants';
+import { Library, LibrarySearchFilters, LibraryStats, LibrarySchema } from '../model/types';
+import { LibraryRepository } from './library.repository';
+import { findSubRegionByCode } from '@/shared/config/region-codes';
 
 export class LibraryRepositoryImpl implements LibraryRepository {
   // private readonly baseUrl = API_CONFIG.LIBRARY_API_BASE; // 이제 사용 안 함
@@ -9,8 +9,13 @@ export class LibraryRepositoryImpl implements LibraryRepository {
 
   private async fetch<T>(endpoint: string, params: Record<string, any> = {}): Promise<T> {
     // ✅ 보안 프록시(/api/libraries) 사용
-    const url = new URL(`/api/libraries/${endpoint}`, typeof window !== 'undefined' ? window.location.origin : process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000');
-    
+    const url = new URL(
+      `/api/libraries/${endpoint}`,
+      typeof window !== 'undefined'
+        ? window.location.origin
+        : process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+    );
+
     // authKey 제거
 
     Object.entries(params).forEach(([key, value]) => {
@@ -22,7 +27,7 @@ export class LibraryRepositoryImpl implements LibraryRepository {
     const response = await fetch(url.toString());
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("API Error Details:", {
+      console.error('API Error Details:', {
         endpoint,
         status: response.status,
         statusText: response.statusText,
@@ -58,60 +63,81 @@ export class LibraryRepositoryImpl implements LibraryRepository {
         if (regionInfo) {
           // 구(District) 정보가 있으면 구 이름, 없으면 시/군(SubRegion) 이름 사용
           targetDistrictName = regionInfo.district?.name || regionInfo.subRegion.name;
-          
-          console.log(`[LibraryRepository] 스마트 필터링 활성화: ${targetDistrictName} (코드: ${filters.dtl_region})`);
 
-          // 2. API에는 상위 지역(Region)으로만 요청 (dtl_region 제거)
-          // 넉넉하게 500개 요청하여 해당 지역 도서관 모두 확보
-          apiParams.region = filters.dtl_region.substring(0, 2);
-          delete apiParams.dtl_region;
-          apiParams.pageSize = 500; 
+          console.log(
+            `[LibraryRepository] 스마트 필터링 활성화: ${targetDistrictName} (코드: ${filters.dtl_region})`
+          );
+
+          // 2. API 매뉴얼에 따르면 dtl_region만 보내도 됨
+          // region과 dtl_region을 함께 보내면 0이 반환되는 문제 해결
+          delete apiParams.region; // region 제거, dtl_region만 사용
         }
       }
 
-      const data = await this.fetch("libSrch", apiParams);
+      console.log(`[LibraryRepository] 🔍 API Params:`, apiParams);
+      const data = await this.fetch('libSrch', apiParams);
 
       let libraries = (data as any).response?.libs || [];
       let totalCount = (data as any).response?.numFound || 0;
+      
+      console.log(`[LibraryRepository] 📥 API returned ${libraries.length} raw libraries (total in DB: ${totalCount})`);
+      
+      // Sample first library address for debugging
+      if (libraries.length > 0) {
+        console.log(`[LibraryRepository] 📋 Sample address: "${libraries[0]?.lib?.address}"`);
+      }
 
       // 3. 주소 기반 정밀 필터링 (2단계: 구 -> 시/군)
       if (targetDistrictName && libraries.length > 0) {
+        console.log(`[LibraryRepository] 🔍 Filtering ${libraries.length} libraries by "${targetDistrictName}"`);
+        
         // 1차: 구(District) 이름으로 필터링
         let filteredLibs = libraries.filter((lib: any) => {
-           const addr = lib.lib.address || "";
-           return addr.includes(targetDistrictName!);
+          const addr = lib.lib.address || '';
+          return addr.includes(targetDistrictName!);
         });
+        
+        console.log(`[LibraryRepository] ✂️ After filtering by "${targetDistrictName}": ${filteredLibs.length} libraries`);
 
         if (filteredLibs.length > 0) {
-           console.log(`[LibraryRepository] ${targetDistrictName} 도서관 ${filteredLibs.length}개 필터링 성공`);
-           libraries = filteredLibs;
-           totalCount = filteredLibs.length;
+          console.log(
+            `[LibraryRepository] ${targetDistrictName} 도서관 ${filteredLibs.length}개 필터링 성공`
+          );
+          libraries = filteredLibs;
+          totalCount = filteredLibs.length;
         } else {
-           // 2차: 구 단위 검색 실패 시, 시/군(SubRegion) 단위로 확장 시도
-           // 예: "청원구" 데이터가 없으면 "청주시" 전체라도 보여줌 (충북 전체보다는 나음)
-           const regionInfo = findSubRegionByCode(filters?.dtl_region!);
-           const subRegionName = regionInfo?.subRegion.name;
-           
-           if (subRegionName && subRegionName !== targetDistrictName) {
-               console.log(`[LibraryRepository] ${targetDistrictName} 결과 없음. ${subRegionName} 단위로 확장 시도.`);
-               filteredLibs = libraries.filter((lib: any) => {
-                   const addr = lib.lib.address || "";
-                   return addr.includes(subRegionName);
-               });
-               
-               if (filteredLibs.length > 0) {
-                   libraries = filteredLibs;
-                   totalCount = filteredLibs.length;
-               } else {
-                   // 시/군 단위도 없으면 빈 배열 (Fallback 제거)
-                   libraries = [];
-                   totalCount = 0;
-               }
-           } else {
-               // 상위 지역이 없거나 같으면 빈 배열
-               libraries = [];
-               totalCount = 0;
-           }
+          // 2차: 구 단위 검색 실패 시, 시/군(SubRegion) 단위로 확장 시도
+          const regionInfo = findSubRegionByCode(filters?.dtl_region!);
+          const subRegionName = regionInfo?.subRegion.name;
+
+          if (subRegionName && subRegionName !== targetDistrictName) {
+            console.log(
+              `[LibraryRepository] ${targetDistrictName} 결과 없음. ${subRegionName} 단위로 확장 시도.`
+            );
+            filteredLibs = libraries.filter((lib: any) => {
+              const addr = lib.lib.address || '';
+              return addr.includes(subRegionName);
+            });
+
+            if (filteredLibs.length > 0) {
+              libraries = filteredLibs;
+              totalCount = filteredLibs.length;
+            } else {
+              // 3차: 모든 필터링 실패 시, API에서 받아온 전체 목록 반환 (Fallback)
+              // 빈 화면보다는 해당 시/도의 도서관이라도 보여주는 것이 낫다.
+              console.warn(
+                `[LibraryRepository] ❌ 모든 주소 필터링 실패. ${filters!.region} 지역 전체 목록(${libraries.length}개)을 반환합니다.`
+              );
+              // libraries는 이미 전체 목록임
+              totalCount = libraries.length;
+            }
+          } else {
+             // 상위 지역 이름도 매칭 안되는 경우 Fallback
+             console.warn(
+                `[LibraryRepository] ❌ 주소 필터링 실패. ${filters!.region} 지역 전체 목록(${libraries.length}개)을 반환합니다.`
+              );
+              totalCount = libraries.length;
+          }
         }
       }
 
@@ -135,14 +161,14 @@ export class LibraryRepositoryImpl implements LibraryRepository {
         totalCount,
       };
     } catch (error) {
-      console.error("Get libraries error:", error);
+      console.error('Get libraries error:', error);
       return { libraries: [], totalCount: 0 };
     }
   }
 
   async getLibraryDetail(libCode: string): Promise<Library | null> {
     try {
-      const data = await this.fetch("libInfo", { libCode });
+      const data = await this.fetch('libInfo', { libCode });
       const lib = (data as any).response?.lib;
 
       if (!lib) return null;
@@ -162,17 +188,17 @@ export class LibraryRepositoryImpl implements LibraryRepository {
         libraryType: lib.libraryType,
       });
     } catch (error) {
-      console.error("Get library detail error:", error);
+      console.error('Get library detail error:', error);
       return null;
     }
   }
 
   async getLibraryPopularBooks(libCode: string): Promise<any[]> {
     try {
-      const data = await this.fetch("loanItemSrch", { libCode });
+      const data = await this.fetch('loanItemSrch', { libCode });
       return (data as any).response?.docs || [];
     } catch (error) {
-      console.error("Get library popular books error:", error);
+      console.error('Get library popular books error:', error);
       return [];
     }
   }
@@ -183,7 +209,7 @@ export class LibraryRepositoryImpl implements LibraryRepository {
     month: string
   ): Promise<LibraryStats | null> {
     try {
-      const data = await this.fetch("loanReturnTrend", {
+      const data = await this.fetch('loanReturnTrend', {
         libCode,
         year,
         month,
@@ -202,7 +228,7 @@ export class LibraryRepositoryImpl implements LibraryRepository {
         month,
       };
     } catch (error) {
-      console.error("Get library stats error:", error);
+      console.error('Get library stats error:', error);
       return null;
     }
   }

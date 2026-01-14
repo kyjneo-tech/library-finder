@@ -3,7 +3,7 @@
  * 전국 도서관 통합 서비스에 대한 안내를 제공합니다.
  */
 
-"use client";
+'use client';
 
 export function ServiceBanner() {
   return (
@@ -22,12 +22,8 @@ export function ServiceBanner() {
           className="p-4 bg-white rounded-xl border border-amber-200 hover:shadow-md transition-all group"
         >
           <div className="text-2xl mb-2">💳</div>
-          <p className="font-bold text-sm text-gray-800 group-hover:text-amber-600">
-            책이음
-          </p>
-          <p className="text-[10px] text-gray-500 mt-1">
-            하나의 회원증으로 전국 2,804개 도서관
-          </p>
+          <p className="font-bold text-sm text-gray-800 group-hover:text-amber-600">책이음</p>
+          <p className="text-[10px] text-gray-500 mt-1">하나의 회원증으로 전국 2,804개 도서관</p>
         </a>
         <a
           href="https://books.nl.go.kr/PU/contents/P10202000000.do"
@@ -36,12 +32,8 @@ export function ServiceBanner() {
           className="p-4 bg-white rounded-xl border border-emerald-200 hover:shadow-md transition-all group"
         >
           <div className="text-2xl mb-2">🌊</div>
-          <p className="font-bold text-sm text-gray-800 group-hover:text-emerald-600">
-            책바다
-          </p>
-          <p className="text-[10px] text-gray-500 mt-1">
-            타 지역 책 택배 배송 (왕복 5,800원)
-          </p>
+          <p className="font-bold text-sm text-gray-800 group-hover:text-emerald-600">책바다</p>
+          <p className="text-[10px] text-gray-500 mt-1">타 지역 책 택배 배송 (왕복 5,800원)</p>
         </a>
       </div>
     </div>

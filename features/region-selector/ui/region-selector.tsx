@@ -1,10 +1,10 @@
-"use client";
+'use client';
 
-import { useState, useEffect } from "react";
-import { MapPin, ChevronDown, Check, ChevronLeft } from "lucide-react";
-import { useRegionStore, REGIONS } from "../lib/use-region-store";
-import { cn } from "@/shared/lib/cn";
-import { RegionData, SubRegion, District } from "@/shared/config/region-codes";
+import { useState, useEffect } from 'react';
+import { MapPin, ChevronDown, Check, ChevronLeft } from 'lucide-react';
+import { useRegionStore, REGIONS } from '../lib/use-region-store';
+import { cn } from '@/shared/lib/cn';
+import { RegionData, SubRegion, District } from '@/shared/config/region-codes';
 
 interface RegionSelectorProps {
   className?: string;
@@ -23,7 +23,7 @@ export function RegionSelector({ className }: RegionSelectorProps) {
     getDisplayName,
   } = useRegionStore();
 
-  const [step, setStep] = useState<"region" | "subRegion" | "district">("region");
+  const [step, setStep] = useState<'region' | 'subRegion' | 'district'>('region');
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -34,11 +34,11 @@ export function RegionSelector({ className }: RegionSelectorProps) {
     setIsOpen(true);
     // 현재 상태에 맞춰 단계 설정
     if (selectedSubRegion) {
-        setStep(selectedSubRegion.districts ? "district" : "subRegion");
+      setStep(selectedSubRegion.districts ? 'district' : 'subRegion');
     } else if (selectedRegion) {
-        setStep("subRegion");
+      setStep('subRegion');
     } else {
-        setStep("region");
+      setStep('region');
     }
   };
 
@@ -48,13 +48,13 @@ export function RegionSelector({ className }: RegionSelectorProps) {
 
   const handleRegionSelect = (region: RegionData) => {
     setRegion(region);
-    setStep("subRegion");
+    setStep('subRegion');
   };
 
   const handleSubRegionSelect = (subRegion: SubRegion) => {
     setSubRegion(subRegion);
     if (subRegion.districts && subRegion.districts.length > 0) {
-      setStep("district");
+      setStep('district');
     } else {
       setIsOpen(false);
     }
@@ -66,12 +66,12 @@ export function RegionSelector({ className }: RegionSelectorProps) {
   };
 
   const handleBack = () => {
-    if (step === "district") setStep("subRegion");
-    else if (step === "subRegion") setStep("region");
+    if (step === 'district') setStep('subRegion');
+    else if (step === 'subRegion') setStep('region');
   };
 
   return (
-    <div className={cn("relative", className)}>
+    <div className={cn('relative', className)}>
       <button
         type="button"
         onClick={handleOpen}
@@ -79,50 +79,79 @@ export function RegionSelector({ className }: RegionSelectorProps) {
       >
         <MapPin className="w-5 h-5 text-purple-500 group-hover:scale-110 transition-transform" />
         <span className="flex-1 text-left font-bold text-gray-800 truncate">
-          {mounted ? getDisplayName() : "지역을 선택하세요"}
+          {mounted ? getDisplayName() : '지역을 선택하세요'}
         </span>
-        <ChevronDown className={cn("w-4 h-4 text-gray-400 transition-transform", isOpen && "rotate-180")} />
+        <ChevronDown
+          className={cn('w-4 h-4 text-gray-400 transition-transform', isOpen && 'rotate-180')}
+        />
       </button>
 
       {isOpen && (
         <>
-          <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40 animate-in fade-in" onClick={handleClose} />
+          <div
+            className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40 animate-in fade-in"
+            onClick={handleClose}
+          />
           <div className="absolute left-0 right-0 top-full mt-3 bg-white border border-gray-100 rounded-[2.5rem] shadow-2xl z-50 max-h-[70vh] overflow-hidden animate-in slide-in-from-top-4 duration-300">
             {/* 헤더 */}
             <div className="sticky top-0 bg-white border-b border-gray-50 px-6 py-5 flex items-center gap-3">
-              {step !== "region" && (
-                <button type="button" onClick={handleBack} className="w-10 h-10 flex items-center justify-center bg-gray-50 rounded-full text-purple-500 hover:bg-purple-100 transition-colors">
+              {step !== 'region' && (
+                <button
+                  type="button"
+                  onClick={handleBack}
+                  className="w-10 h-10 flex items-center justify-center bg-gray-50 rounded-full text-purple-500 hover:bg-purple-100 transition-colors"
+                >
                   <ChevronLeft className="w-5 h-5" />
                 </button>
               )}
               <div>
                 <span className="text-[10px] font-black text-purple-300 uppercase tracking-[0.2em] block mb-0.5">
-                    Step {step === "region" ? "01" : step === "subRegion" ? "02" : "03"}
+                  Step {step === 'region' ? '01' : step === 'subRegion' ? '02' : '03'}
                 </span>
                 <span className="font-black text-gray-900 text-lg">
-                    {step === "region" ? "어느 지역인가요?" : step === "subRegion" ? `${selectedRegion?.name} 어디인가요?` : `${selectedSubRegion?.name} 상세 구 선택`}
+                  {step === 'region'
+                    ? '어느 지역인가요?'
+                    : step === 'subRegion'
+                      ? `${selectedRegion?.name} 어디인가요?`
+                      : `${selectedSubRegion?.name} 상세 구 선택`}
                 </span>
               </div>
             </div>
 
             {/* 리스트 */}
             <div className="overflow-y-auto max-h-[50vh] p-4">
-              {step === "region" ? (
+              {step === 'region' ? (
                 <div className="grid grid-cols-2 gap-2.5">
                   {REGIONS.map((region) => (
-                    <button key={region.code} type="button" onClick={() => handleRegionSelect(region)}
-                      className={cn("px-4 py-4 text-left rounded-2xl text-sm font-black transition-all border-2",
-                        selectedRegion?.code === region.code ? "bg-purple-600 text-white border-transparent shadow-lg" : "bg-white text-gray-600 border-gray-50 hover:border-purple-100 hover:bg-purple-50/30")}>
+                    <button
+                      key={region.code}
+                      type="button"
+                      onClick={() => handleRegionSelect(region)}
+                      className={cn(
+                        'px-4 py-4 text-left rounded-2xl text-sm font-black transition-all border-2',
+                        selectedRegion?.code === region.code
+                          ? 'bg-purple-600 text-white border-transparent shadow-lg'
+                          : 'bg-white text-gray-600 border-gray-50 hover:border-purple-100 hover:bg-purple-50/30'
+                      )}
+                    >
                       {region.name}
                     </button>
                   ))}
                 </div>
-              ) : step === "subRegion" ? (
+              ) : step === 'subRegion' ? (
                 <div className="grid grid-cols-2 gap-2.5">
                   {selectedRegion?.subRegions?.map((sub) => (
-                    <button key={sub.code} type="button" onClick={() => handleSubRegionSelect(sub)}
-                      className={cn("px-4 py-4 text-left rounded-2xl text-sm font-black transition-all border-2 flex items-center justify-between",
-                        selectedSubRegion?.code === sub.code ? "bg-purple-600 text-white border-transparent shadow-lg" : "bg-white text-gray-600 border-gray-50 hover:border-purple-100 hover:bg-purple-50/30")}>
+                    <button
+                      key={sub.code}
+                      type="button"
+                      onClick={() => handleSubRegionSelect(sub)}
+                      className={cn(
+                        'px-4 py-4 text-left rounded-2xl text-sm font-black transition-all border-2 flex items-center justify-between',
+                        selectedSubRegion?.code === sub.code
+                          ? 'bg-purple-600 text-white border-transparent shadow-lg'
+                          : 'bg-white text-gray-600 border-gray-50 hover:border-purple-100 hover:bg-purple-50/30'
+                      )}
+                    >
                       <span>{sub.name}</span>
                       {sub.districts && <ChevronDown className="w-3 h-3 opacity-50" />}
                     </button>
@@ -131,9 +160,17 @@ export function RegionSelector({ className }: RegionSelectorProps) {
               ) : (
                 <div className="grid grid-cols-2 gap-2.5">
                   {selectedSubRegion?.districts?.map((dist) => (
-                    <button key={dist.code} type="button" onClick={() => handleDistrictSelect(dist)}
-                      className={cn("px-4 py-4 text-left rounded-2xl text-sm font-black transition-all border-2 flex items-center justify-between",
-                        selectedDistrict?.code === dist.code ? "bg-indigo-600 text-white border-transparent shadow-lg" : "bg-white text-gray-600 border-gray-50 hover:border-indigo-100 hover:bg-indigo-50/30")}>
+                    <button
+                      key={dist.code}
+                      type="button"
+                      onClick={() => handleDistrictSelect(dist)}
+                      className={cn(
+                        'px-4 py-4 text-left rounded-2xl text-sm font-black transition-all border-2 flex items-center justify-between',
+                        selectedDistrict?.code === dist.code
+                          ? 'bg-indigo-600 text-white border-transparent shadow-lg'
+                          : 'bg-white text-gray-600 border-gray-50 hover:border-indigo-100 hover:bg-indigo-50/30'
+                      )}
+                    >
                       <span>{dist.name}</span>
                       {selectedDistrict?.code === dist.code && <Check className="w-4 h-4" />}
                     </button>

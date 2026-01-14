@@ -1,10 +1,10 @@
-"use client";
+'use client';
 
-import { useBookSearch } from "@/features/book-search/lib/use-book-search";
-import { SearchBar } from "@/features/book-search/ui/search-bar";
-import { BookCard } from "@/features/book-search/ui/book-card";
-import { Skeleton } from "@/shared/ui/skeleton";
-import { BookOpen } from "lucide-react";
+import { useBookSearch } from '@/features/book-search/lib/use-book-search';
+import { SearchBar } from '@/features/book-search/ui/search-bar';
+import { BookCard } from '@/features/book-search/ui/book-card';
+import { Skeleton } from '@/shared/ui/skeleton';
+import { BookOpen } from 'lucide-react';
 
 export default function SearchPage() {
   const { books, totalCount, loading, filters } = useBookSearch();
@@ -31,7 +31,7 @@ export default function SearchPage() {
         <div className="text-center py-16">
           <BookOpen className="w-16 h-16 mx-auto mb-4 text-muted-foreground opacity-20" />
           <p className="text-muted-foreground">
-            {filters.query ? "검색 결과가 없습니다" : "검색어를 입력해주세요"}
+            {filters.query ? '검색 결과가 없습니다' : '검색어를 입력해주세요'}
           </p>
         </div>
       ) : (

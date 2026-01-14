@@ -1,10 +1,10 @@
-"use client";
+'use client';
 
-import { Book } from "@/entities/book/model/types";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/card";
-import { Badge } from "@/shared/ui/badge";
-import Link from "next/link";
-import { BookOpen, User, Calendar } from "lucide-react";
+import { Book } from '@/entities/book/model/types';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card';
+import { Badge } from '@/shared/ui/badge';
+import Link from 'next/link';
+import { BookOpen, User, Calendar } from 'lucide-react';
 
 interface BookCardProps {
   book: Book;

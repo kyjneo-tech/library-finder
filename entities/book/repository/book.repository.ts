@@ -1,9 +1,4 @@
-import {
-  Book,
-  BookAvailability,
-  BookSearchFilters,
-  PopularBooksOptions,
-} from "../model/types";
+import { Book, BookAvailability, BookSearchFilters, PopularBooksOptions } from '../model/types';
 
 /**
  * 도서 Repository 인터페이스
@@ -30,7 +25,10 @@ export interface BookRepository {
   /**
    * 도서 소장 도서관 조회 (API #13)
    */
-  getLibrariesWithBook(isbn: string, regionCode?: string): Promise<{
+  getLibrariesWithBook(
+    isbn: string,
+    regionCode?: string
+  ): Promise<{
     libraries: BookAvailability[];
     totalCount: number;
   }>;
@@ -68,7 +66,10 @@ export interface BookRepository {
   /**
    * [Deep Scan] 지역 내 모든 도서관 전수 조사
    */
-  deepScanLibraries(isbn: string, regionCode: string): Promise<{
+  deepScanLibraries(
+    isbn: string,
+    regionCode: string
+  ): Promise<{
     libraries: BookAvailability[];
     totalCount: number;
   }>;

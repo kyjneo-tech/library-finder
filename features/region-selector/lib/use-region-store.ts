@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import { create } from "zustand";
-import { persist } from "zustand/middleware";
-import { REGIONS, RegionData, SubRegion, District } from "@/shared/config/region-codes";
+import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
+import { REGIONS, RegionData, SubRegion, District } from '@/shared/config/region-codes';
 
 interface RegionState {
   selectedRegion: RegionData | null;
@@ -68,11 +68,11 @@ export const useRegionStore = create<RegionState>()(
         if (selectedRegion) {
           return selectedRegion.name;
         }
-        return "지역을 선택하세요";
+        return '지역을 선택하세요';
       },
     }),
     {
-      name: "region-storage-v2",
+      name: 'region-storage-v2',
       partialize: (state) => ({
         selectedRegion: state.selectedRegion,
         selectedSubRegion: state.selectedSubRegion,

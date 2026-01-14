@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import { create } from "zustand";
-import { Library } from "@/entities/library/model/types";
-import { libraryRepository } from "@/entities/library/repository/library.repository.impl";
+import { create } from 'zustand';
+import { Library } from '@/entities/library/model/types';
+import { libraryRepository } from '@/entities/library/repository/library.repository.impl';
 
 interface MapState {
   libraries: Library[];
@@ -28,10 +28,11 @@ export const useMapStore = create<MapState>((set, get) => ({
   error: null,
 
   loadLibraries: async (region?: string) => {
+    console.log(`[useMapStore] 🔍 loadLibraries called with region: ${region}`);
     set({ loading: true, error: null });
     try {
       const filters: any = {}; // LibrarySearchFilters 타입에 맞게 구성
-      
+
       if (region) {
         if (region.length === 2) {
           filters.region = region;
@@ -39,22 +40,24 @@ export const useMapStore = create<MapState>((set, get) => ({
           filters.region = region.substring(0, 2);
           filters.dtl_region = region;
         } else {
-            // 그 외의 경우 (혹시 모를 예외 처리)
-            filters.region = region; 
+          // 그 외의 경우 (혹시 모를 예외 처리)
+          filters.region = region;
         }
       }
 
+      console.log(`[useMapStore] 📤 Calling libraryRepository with filters:`, filters);
       const result = await libraryRepository.getLibraries(filters);
+      console.log(`[useMapStore] 📥 Received ${result.libraries.length} libraries`);
+      
       set({
         libraries: result.libraries,
         loading: false,
       });
     } catch (error) {
+      console.error(`[useMapStore] ❌ Error loading libraries:`, error);
       set({
         error:
-          error instanceof Error
-            ? error.message
-            : "도서관 목록을 불러오는 중 오류가 발생했습니다",
+          error instanceof Error ? error.message : '도서관 목록을 불러오는 중 오류가 발생했습니다',
         loading: false,
       });
     }

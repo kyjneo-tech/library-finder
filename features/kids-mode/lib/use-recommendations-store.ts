@@ -1,7 +1,8 @@
-import { create } from "zustand";
-import { persist } from "zustand/middleware";
-import { Book } from "@/entities/book/model/types";
-import { bookRepository } from "@/entities/book/repository/book.repository.impl";
+import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
+import { Book } from '@/entities/book/model/types';
+import { bookRepository } from '@/entities/book/repository/book.repository.impl';
+import { kidsBookService } from './kids-book.service';
 
 interface RecommendationsState {
   ageRecommendations: Record<string, Book[]>;
@@ -37,122 +38,116 @@ export const useRecommendationsStore = create<RecommendationsState>()(
         const now = Date.now();
         const loadKey = `age-${age}`;
 
-        // 1. 캐시 확인
-        if (ageRecommendations[age] && now - (ageRecommendationsTimestamp[age] || 0) < CACHE_DURATION) {
+        if (
+          ageRecommendations[age] &&
+          now - (ageRecommendationsTimestamp[age] || 0) < CACHE_DURATION
+        ) {
           return ageRecommendations[age];
         }
 
-        // 2. 🛡️ 중복 요청 방지: 이미 이 데이터를 불러오는 중이면 대기
         if (loadingStates[loadKey]) {
-            console.log(`[Store] ${loadKey} is already loading, waiting...`);
-            // 잠시 대기 후 캐시 확인하는 방식으로 재귀 호출 최소화
-            await new Promise(resolve => setTimeout(resolve, 500));
-            return get().fetchAgeRecommendations(age);
+          await new Promise((resolve) => setTimeout(resolve, 500));
+          return get().fetchAgeRecommendations(age);
         }
 
         try {
-            set((state) => ({ loadingStates: { ...state.loadingStates, [loadKey]: true } }));
-            
-            let finalBooks: Book[] = [];
-            if (age === '0-2') {
-                const result = await bookRepository.searchBooks({ query: "보드북 촉각책 초점책 그림책", pageSize: 12 });
-                finalBooks = result.books;
-            } else if (age === '3-5') {
-                const result = await bookRepository.searchBooks({ query: "창작동화 인성동화 생활습관", pageSize: 12 });
-                finalBooks = result.books;
-            } else {
-                let ageParam = age === '6-7' ? '6' : 'a8';
-                finalBooks = await bookRepository.getPopularBooks({ age: ageParam, addCode: '7', pageSize: 12 });
-            }
+          set((state) => ({ loadingStates: { ...state.loadingStates, [loadKey]: true } }));
 
-            if (finalBooks.length === 0) {
-                finalBooks = await bookRepository.getPopularBooks({ age: '0', addCode: '7', pageSize: 12 });
-            }
+          // Delegate complex logic to KidsBookService
+          const finalBooks = await kidsBookService.getRecommendationsByAge(age);
 
-            set((state) => ({
-                ageRecommendations: { ...state.ageRecommendations, [age]: finalBooks },
-                ageRecommendationsTimestamp: { ...state.ageRecommendationsTimestamp, [age]: now },
-                loadingStates: { ...state.loadingStates, [loadKey]: false }
-            }));
+          set((state) => ({
+            ageRecommendations: { ...state.ageRecommendations, [age]: finalBooks },
+            ageRecommendationsTimestamp: { ...state.ageRecommendationsTimestamp, [age]: now },
+            loadingStates: { ...state.loadingStates, [loadKey]: false },
+          }));
 
-            return finalBooks;
-        } catch (error) { 
-            set((state) => ({ loadingStates: { ...state.loadingStates, [loadKey]: false } }));
-            return []; 
+          return finalBooks;
+        } catch (error) {
+          set((state) => ({ loadingStates: { ...state.loadingStates, [loadKey]: false } }));
+          return [];
         }
       },
 
       fetchFamilyPopularBooks: async (regionCode?: string) => {
         const { familyPopularBooks, familyPopularBooksTimestamp, loadingStates } = get();
         const now = Date.now();
-        const cacheKey = regionCode || "nationwide";
+        const cacheKey = regionCode || 'nationwide';
         const loadKey = `family-${cacheKey}`;
 
-        if (familyPopularBooks[cacheKey] && now - (familyPopularBooksTimestamp[cacheKey] || 0) < CACHE_DURATION) {
-            return familyPopularBooks[cacheKey];
+        if (
+          familyPopularBooks[cacheKey] &&
+          now - (familyPopularBooksTimestamp[cacheKey] || 0) < CACHE_DURATION
+        ) {
+          return familyPopularBooks[cacheKey];
         }
 
         if (loadingStates[loadKey]) {
-            await new Promise(resolve => setTimeout(resolve, 500));
-            return get().fetchFamilyPopularBooks(regionCode);
+          await new Promise((resolve) => setTimeout(resolve, 500));
+          return get().fetchFamilyPopularBooks(regionCode);
         }
 
         try {
-            set((state) => ({ loadingStates: { ...state.loadingStates, [loadKey]: true } }));
-            const books = await bookRepository.getPopularBooks({
-                region: regionCode || undefined,
-                age: "14;20;30;40", 
-                pageSize: 10,
-            });
-            set((state) => ({
-                familyPopularBooks: { ...state.familyPopularBooks, [cacheKey]: books },
-                familyPopularBooksTimestamp: { ...state.familyPopularBooksTimestamp, [cacheKey]: now },
-                loadingStates: { ...state.loadingStates, [loadKey]: false }
-            }));
-            return books;
-        } catch (error) { 
-            set((state) => ({ loadingStates: { ...state.loadingStates, [loadKey]: false } }));
-            return []; 
+          set((state) => ({ loadingStates: { ...state.loadingStates, [loadKey]: true } }));
+          // General logical uses BookRepository directly (simple)
+          const books = await bookRepository.getPopularBooks({
+            region: regionCode || undefined,
+            age: '14;20;30;40', // Adults/Parents
+            pageSize: 10,
+          });
+          set((state) => ({
+            familyPopularBooks: { ...state.familyPopularBooks, [cacheKey]: books },
+            familyPopularBooksTimestamp: { ...state.familyPopularBooksTimestamp, [cacheKey]: now },
+            loadingStates: { ...state.loadingStates, [loadKey]: false },
+          }));
+          return books;
+        } catch (error) {
+          set((state) => ({ loadingStates: { ...state.loadingStates, [loadKey]: false } }));
+          return [];
         }
       },
 
       fetchLocalKidsPopularBooks: async (regionCode?: string) => {
         const { localKidsPopularBooks, localKidsPopularBooksTimestamp, loadingStates } = get();
         const now = Date.now();
-        const cacheKey = regionCode || "nationwide";
+        const cacheKey = regionCode || 'nationwide';
         const loadKey = `kids-local-${cacheKey}`;
 
-        if (localKidsPopularBooks[cacheKey] && now - (localKidsPopularBooksTimestamp[cacheKey] || 0) < CACHE_DURATION) {
-            return localKidsPopularBooks[cacheKey];
+        if (
+          localKidsPopularBooks[cacheKey] &&
+          now - (localKidsPopularBooksTimestamp[cacheKey] || 0) < CACHE_DURATION
+        ) {
+          return localKidsPopularBooks[cacheKey];
         }
 
         if (loadingStates[loadKey]) {
-            await new Promise(resolve => setTimeout(resolve, 500));
-            return get().fetchLocalKidsPopularBooks(regionCode);
+          await new Promise((resolve) => setTimeout(resolve, 500));
+          return get().fetchLocalKidsPopularBooks(regionCode);
         }
 
         try {
-            set((state) => ({ loadingStates: { ...state.loadingStates, [loadKey]: true } }));
-            const books = await bookRepository.getPopularBooks({
-                region: regionCode || undefined,
-                age: "0;6;8", 
-                addCode: "7",
-                pageSize: 15,
-            });
-            set((state) => ({
-                localKidsPopularBooks: { ...state.localKidsPopularBooks, [cacheKey]: books },
-                localKidsPopularBooksTimestamp: { ...state.localKidsPopularBooksTimestamp, [cacheKey]: now },
-                loadingStates: { ...state.loadingStates, [loadKey]: false }
-            }));
-            return books;
-        } catch (error) { 
-            set((state) => ({ loadingStates: { ...state.loadingStates, [loadKey]: false } }));
-            return []; 
+          set((state) => ({ loadingStates: { ...state.loadingStates, [loadKey]: true } }));
+          
+          // Delegate to KidsBookService
+          const books = await kidsBookService.getPopularBooks(regionCode);
+
+          set((state) => ({
+            localKidsPopularBooks: { ...state.localKidsPopularBooks, [cacheKey]: books },
+            localKidsPopularBooksTimestamp: {
+              ...state.localKidsPopularBooksTimestamp,
+              [cacheKey]: now,
+            },
+            loadingStates: { ...state.loadingStates, [loadKey]: false },
+          }));
+          return books;
+        } catch (error) {
+          set((state) => ({ loadingStates: { ...state.loadingStates, [loadKey]: false } }));
+          return [];
         }
       },
     }),
     {
-      name: "library-recommendations-storage-v7",
+      name: 'library-recommendations-storage-v9',
     }
   )
 );

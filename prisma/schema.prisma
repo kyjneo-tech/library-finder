@@ -1,0 +1,46 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// 1. 책 표지 이미지 캐시
+model CachedBookCover {
+  isbn      String   @id
+  imageUrl  String   @map("image_url")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("cached_book_covers")
+}
+
+// 2. 도서관 기본 정보 캐시
+model CachedLibrary {
+  libCode   String   @id @map("lib_code")
+  libName   String   @map("lib_name")
+  address   String?
+  tel       String?
+  latitude  Decimal? // Numeric -> Decimal
+  longitude Decimal? // Numeric -> Decimal
+  homepage  String?
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@map("cached_libraries")
+}
+
+// 3. 인기도서 통계 캐시
+model CachedPopularBook {
+  id         Int       @id @default(autoincrement())
+  category   String    // 'hot_trend', 'new_books' 등
+  regionCode String    @default("ALL") @map("region_code")
+  bookData   Json      @map("book_data") // JSONB
+  createdAt  DateTime  @default(now()) @map("created_at")
+  expiresAt  DateTime? @map("expires_at")
+
+  @@index([category, regionCode])
+  @@map("cached_popular_books")
+}

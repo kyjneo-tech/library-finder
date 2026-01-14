@@ -1,13 +1,13 @@
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
-import { BookOpen } from "lucide-react";
-import { motion } from "framer-motion";
-import { useAgeFilter } from "@/features/kids-mode/lib/use-age-filter";
-import { useRecommendationsStore } from "@/features/kids-mode/lib/use-recommendations-store";
-import { Book } from "@/entities/book/model/types";
-import { cn } from "@/shared/lib/cn";
-import { staggerContainer, staggerItem } from "@/shared/lib/animations/variants";
+import { useEffect, useState } from 'react';
+import { BookOpen } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { useAgeFilter } from '@/features/kids-mode/lib/use-age-filter';
+import { useRecommendationsStore } from '@/features/kids-mode/lib/use-recommendations-store';
+import { Book } from '@/entities/book/model/types';
+import { cn } from '@/shared/lib/cn';
+import { staggerContainer, staggerItem } from '@/shared/lib/animations/variants';
 
 interface KidsRecommendationsProps {
   onBookSelect: (book: Book) => void;
@@ -22,17 +22,22 @@ export function KidsRecommendations({ onBookSelect }: KidsRecommendationsProps) 
 
   const getAgeLabel = () => {
     switch (selectedAge) {
-      case '0-2': return "0~2세";
-      case '3-5': return "3~5세";
-      case '6-7': return "6~7세";
-      case '8-10': return "초등 저학년";
-      default: return "";
+      case '0-2':
+        return '0~2세';
+      case '3-5':
+        return '3~5세';
+      case '6-7':
+        return '6~7세';
+      case '8-10':
+        return '초등 저학년';
+      default:
+        return '';
     }
   };
 
   const getTitle = () => {
     if (selectedAge === 'all') {
-      return "🧸 요즘 아이들이 좋아하는 책";
+      return '🧸 요즘 아이들이 좋아하는 책';
     }
     return `🧸 ${getAgeLabel()} 친구들이 좋아하는 책`;
   };
@@ -43,7 +48,7 @@ export function KidsRecommendations({ onBookSelect }: KidsRecommendationsProps) 
       const data = await fetchAgeRecommendations(selectedAge);
       setBooks(data.slice(0, 6));
     } catch (error) {
-      console.error("Failed to load recommendations:", error);
+      console.error('Failed to load recommendations:', error);
     } finally {
       setLoading(false);
     }
@@ -128,20 +133,24 @@ export function KidsRecommendations({ onBookSelect }: KidsRecommendationsProps) 
               variants={staggerItem}
               whileHover={{
                 y: -8,
-                transition: { type: "spring", stiffness: 300 }
+                transition: { type: 'spring', stiffness: 300 },
               }}
               whileTap={{ scale: 0.95 }}
             >
               {/* 인기 순위 배지 */}
               <motion.div
                 className={cn(
-                  "absolute -top-2 -left-2 w-8 h-8 rounded-2xl flex items-center justify-center text-xs font-black z-10 shadow-lg border-2 border-white",
-                  idx === 0 ? "bg-amber-400 text-white" :
-                  idx === 1 ? "bg-slate-300 text-white" :
-                  idx === 2 ? "bg-orange-400 text-white" : "bg-white text-gray-400"
+                  'absolute -top-2 -left-2 w-8 h-8 rounded-2xl flex items-center justify-center text-xs font-black z-10 shadow-lg border-2 border-white',
+                  idx === 0
+                    ? 'bg-amber-400 text-white'
+                    : idx === 1
+                      ? 'bg-slate-300 text-white'
+                      : idx === 2
+                        ? 'bg-orange-400 text-white'
+                        : 'bg-white text-gray-400'
                 )}
                 whileHover={{ scale: 1.2, rotate: -15 }}
-                transition={{ type: "spring", stiffness: 400 }}
+                transition={{ type: 'spring', stiffness: 400 }}
               >
                 {idx + 1}
               </motion.div>
@@ -160,9 +169,7 @@ export function KidsRecommendations({ onBookSelect }: KidsRecommendationsProps) 
                     <BookOpen className="w-10 h-10 text-orange-200" />
                   </div>
                 )}
-                <motion.div
-                  className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"
-                />
+                <motion.div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
               </div>
 
               <p className="text-[11px] mt-2.5 font-bold text-gray-700 line-clamp-1 px-1 group-hover:text-orange-500 transition-colors">

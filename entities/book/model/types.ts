@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from 'zod';
 
 /**
  * 도서 기본 정보
@@ -18,6 +18,7 @@ export const BookSchema = z.object({
   loanCnt: z.number().optional(), // 대출 횟수
   ranking: z.number().optional(), // 순위
   additionSymbol: z.string().optional(), // ISBN 부가기호 (대상 정보 등)
+  emotion: z.string().optional(), // 감정 분석 결과 (키즈 모드)
 });
 
 export type Book = z.infer<typeof BookSchema>;
@@ -54,6 +55,10 @@ export interface BookSearchFilters {
   publishYear?: string;
   pageNo?: number;
   pageSize?: number;
+  sort?: string;
+  order?: string;
+  region?: string;
+  dtl_region?: string;
 }
 
 /**
@@ -61,6 +66,7 @@ export interface BookSearchFilters {
  */
 export interface PopularBooksOptions {
   region?: string; // 지역코드
+  libCode?: string; // 도서관코드 (NEW)
   age?: string; // 연령대
   gender?: string; // 성별
   addCode?: string; // 부가기호

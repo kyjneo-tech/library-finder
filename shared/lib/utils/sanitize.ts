@@ -1,4 +1,4 @@
-import DOMPurify from "isomorphic-dompurify";
+import DOMPurify from 'isomorphic-dompurify';
 
 /**
  * HTML 문자열을 새니타이징하여 XSS 공격을 방어합니다.
@@ -7,8 +7,8 @@ import DOMPurify from "isomorphic-dompurify";
  */
 export function sanitizeHTML(dirty: string): string {
   return DOMPurify.sanitize(dirty, {
-    ALLOWED_TAGS: ["b", "i", "em", "strong", "a", "br", "span", "p"],
-    ALLOWED_ATTR: ["href", "target", "rel"],
+    ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'a', 'br', 'span', 'p'],
+    ALLOWED_ATTR: ['href', 'target', 'rel'],
     ALLOW_DATA_ATTR: false,
   });
 }

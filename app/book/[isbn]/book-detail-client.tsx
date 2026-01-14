@@ -1,12 +1,12 @@
-"use client";
+'use client';
 
-import { motion, useInView } from "framer-motion";
-import { BookOpen, User, Calendar, Building2, TrendingUp } from "lucide-react";
-import { useRef, useEffect, useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/card";
-import { Badge } from "@/shared/ui/badge";
-import { Book } from "@/entities/book/model/types";
-import { staggerContainer, staggerItem, floatingCard } from "@/shared/lib/animations/variants";
+import { motion, useInView } from 'framer-motion';
+import { BookOpen, User, Calendar, Building2, TrendingUp } from 'lucide-react';
+import { useRef, useEffect, useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card';
+import { Badge } from '@/shared/ui/badge';
+import { Book } from '@/entities/book/model/types';
+import { staggerContainer, staggerItem, floatingCard } from '@/shared/lib/animations/variants';
 
 interface BookDetailClientProps {
   book: Book;
@@ -22,7 +22,7 @@ interface BookDetailClientProps {
   };
 }
 
-function CountUpAnimation({ end, suffix = "" }: { end: number; suffix?: string }) {
+function CountUpAnimation({ end, suffix = '' }: { end: number; suffix?: string }) {
   const [count, setCount] = useState(0);
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true });
@@ -70,11 +70,7 @@ export function BookDetailClient({ book, availability }: BookDetailClientProps) 
 
       <div className="container mx-auto p-4 space-y-6 relative z-10">
         {/* 책 히어로 섹션 */}
-        <motion.div
-          variants={floatingCard}
-          initial="initial"
-          animate="animate"
-        >
+        <motion.div variants={floatingCard} initial="initial" animate="animate">
           <Card className="glass border-white/50 shadow-premium overflow-hidden">
             {/* 동적 그라데이션 배경 */}
             <div className="absolute inset-0 bg-gradient-to-br from-warmth-50 via-white to-wisdom-50 opacity-60" />
@@ -85,7 +81,7 @@ export function BookDetailClient({ book, availability }: BookDetailClientProps) 
                 <motion.div
                   className="flex-shrink-0"
                   whileHover={{ scale: 1.05, rotateY: 5 }}
-                  transition={{ type: "spring", stiffness: 300 }}
+                  transition={{ type: 'spring', stiffness: 300 }}
                 >
                   {book.bookImageURL ? (
                     <img
@@ -151,10 +147,7 @@ export function BookDetailClient({ book, availability }: BookDetailClientProps) 
                       </Badge>
                     )}
                     {book.loanCnt && book.loanCnt > 0 && (
-                      <motion.div
-                        whileHover={{ scale: 1.1 }}
-                        whileTap={{ scale: 0.95 }}
-                      >
+                      <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}>
                         <Badge className="bg-gradient-to-r from-warmth-500 to-warmth-600 text-white border-0 shadow-lg flex items-center gap-1">
                           <TrendingUp className="w-3 h-3" />
                           대출 <CountUpAnimation end={book.loanCnt} suffix="회" />
@@ -191,13 +184,12 @@ export function BookDetailClient({ book, availability }: BookDetailClientProps) 
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle className="text-xl font-black flex items-center gap-2">
-                  <span className="text-2xl">📚</span>
-                  이 책을 소장한 도서관
+                  <span className="text-2xl">📚</span>이 책을 소장한 도서관
                 </CardTitle>
                 <motion.div
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
-                  transition={{ type: "spring", stiffness: 200, delay: 0.5 }}
+                  transition={{ type: 'spring', stiffness: 200, delay: 0.5 }}
                 >
                   <Badge className="bg-gradient-purple text-white text-lg px-4 py-1 shadow-glow-purple">
                     <CountUpAnimation end={availability.totalCount} />
@@ -214,9 +206,7 @@ export function BookDetailClient({ book, availability }: BookDetailClientProps) 
                   animate={{ opacity: 1, scale: 1 }}
                 >
                   <BookOpen className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-                  <p className="text-gray-500 font-medium">
-                    현재 이 책을 소장한 도서관이 없습니다
-                  </p>
+                  <p className="text-gray-500 font-medium">현재 이 책을 소장한 도서관이 없습니다</p>
                 </motion.div>
               ) : (
                 <motion.div
@@ -232,8 +222,8 @@ export function BookDetailClient({ book, availability }: BookDetailClientProps) 
                       variants={staggerItem}
                       whileHover={{
                         y: -4,
-                        boxShadow: "0 12px 32px rgba(0, 0, 0, 0.08)",
-                        transition: { type: "spring", stiffness: 300 }
+                        boxShadow: '0 12px 32px rgba(0, 0, 0, 0.08)',
+                        transition: { type: 'spring', stiffness: 300 },
                       }}
                       whileTap={{ scale: 0.98 }}
                     >
@@ -247,9 +237,7 @@ export function BookDetailClient({ book, availability }: BookDetailClientProps) 
                         </motion.div>
                         <div>
                           <h3 className="font-bold text-gray-800">{lib.libraryName}</h3>
-                          <p className="text-xs text-gray-500 mt-0.5">
-                            코드: {lib.libraryCode}
-                          </p>
+                          <p className="text-xs text-gray-500 mt-0.5">코드: {lib.libraryCode}</p>
                         </div>
                       </div>
 

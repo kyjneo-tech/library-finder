@@ -1,9 +1,9 @@
-"use client";
+'use client';
 
-import { useEffect } from "react";
-import { useRecommendations } from "../lib/use-recommendations";
-import { BookCard } from "@/features/book-search/ui/book-card";
-import { Skeleton } from "@/shared/ui/skeleton";
+import { useEffect } from 'react';
+import { useRecommendations } from '../lib/use-recommendations';
+import { BookCard } from '@/features/book-search/ui/book-card';
+import { Skeleton } from '@/shared/ui/skeleton';
 
 export function TrendingBooks() {
   const { trendingBooks, loading, loadTrendingBooks } = useRecommendations();

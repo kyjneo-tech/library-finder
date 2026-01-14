@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import { create } from "zustand";
+import { create } from 'zustand';
 
-type BottomSheetHeight = "min" | "mid" | "max";
+type BottomSheetHeight = 'min' | 'mid' | 'max';
 
 interface BottomSheetState {
   height: BottomSheetHeight;
@@ -15,7 +15,7 @@ interface BottomSheetState {
 }
 
 export const useBottomSheet = create<BottomSheetState>((set) => ({
-  height: "min",
+  height: 'min',
   isOpen: true,
 
   setHeight: (height: BottomSheetHeight) => {

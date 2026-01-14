@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
-import { TrendingUp, Hash } from "lucide-react";
-import { bookRepository } from "@/entities/book/repository/book.repository.impl";
+import { useEffect, useState } from 'react';
+import { TrendingUp, Hash } from 'lucide-react';
+import { bookRepository } from '@/entities/book/repository/book.repository.impl';
 
 interface MonthlyTrendsProps {
   onKeywordSearch: (keyword: string, kdc?: string) => void;
@@ -18,20 +18,22 @@ export function MonthlyTrends({ onKeywordSearch }: MonthlyTrendsProps) {
       try {
         const kw = await bookRepository.getMonthlyKeywords();
         // 아동 관련 키워드만 필터링 (선택적)
-        const filtered = kw.filter(word => {
+        const filtered = kw.filter((word) => {
           // 문자열 체크
           if (!word || typeof word !== 'string') return false;
 
           const lower = word.toLowerCase();
           // 성인 관련 키워드 제외
-          return !lower.includes('경제') &&
-                 !lower.includes('투자') &&
-                 !lower.includes('경영') &&
-                 !lower.includes('자기계발');
+          return (
+            !lower.includes('경제') &&
+            !lower.includes('투자') &&
+            !lower.includes('경영') &&
+            !lower.includes('자기계발')
+          );
         });
         setKeywords(filtered.slice(0, 12)); // 12개만 표시
       } catch (error) {
-        console.error("Failed to fetch monthly keywords:", error);
+        console.error('Failed to fetch monthly keywords:', error);
         setKeywords([]);
       } finally {
         setLoading(false);
@@ -64,9 +66,7 @@ export function MonthlyTrends({ onKeywordSearch }: MonthlyTrendsProps) {
         <TrendingUp className="w-5 h-5 text-orange-500" />
         <h3 className="font-semibold text-gray-800">이번 달 인기 키워드</h3>
       </div>
-      <p className="text-xs text-gray-500 mb-3">
-        요즘 부모들이 많이 찾는 주제예요
-      </p>
+      <p className="text-xs text-gray-500 mb-3">요즘 부모들이 많이 찾는 주제예요</p>
 
       <div className="flex flex-wrap gap-2">
         {keywords.map((keyword, idx) => (

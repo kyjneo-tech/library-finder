@@ -1,4 +1,4 @@
-import { Library, LibrarySearchFilters, LibraryStats } from "../model/types";
+import { Library, LibrarySearchFilters, LibraryStats } from '../model/types';
 
 /**
  * 도서관 Repository 인터페이스

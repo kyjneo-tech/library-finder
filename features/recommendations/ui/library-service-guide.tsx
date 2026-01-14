@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import { CreditCard, Ship } from "lucide-react";
-import { useState } from "react";
-import { cn } from "@/shared/lib/cn";
+import { CreditCard, Ship } from 'lucide-react';
+import { useState } from 'react';
+import { cn } from '@/shared/lib/cn';
 
 type ServiceType = 'chaekium' | 'chaekbada' | null;
 
@@ -16,10 +16,10 @@ export function LibraryServiceGuide() {
         <button
           onClick={() => setActiveService(activeService === 'chaekium' ? null : 'chaekium')}
           className={cn(
-            "flex-1 p-4 rounded-2xl border-2 transition-all",
+            'flex-1 p-4 rounded-2xl border-2 transition-all',
             activeService === 'chaekium'
-              ? "bg-amber-50 border-amber-200 shadow-md"
-              : "bg-white border-amber-100 hover:border-amber-200"
+              ? 'bg-amber-50 border-amber-200 shadow-md'
+              : 'bg-white border-amber-100 hover:border-amber-200'
           )}
         >
           <div className="flex items-center gap-2 mb-1">
@@ -33,10 +33,10 @@ export function LibraryServiceGuide() {
         <button
           onClick={() => setActiveService(activeService === 'chaekbada' ? null : 'chaekbada')}
           className={cn(
-            "flex-1 p-4 rounded-2xl border-2 transition-all",
+            'flex-1 p-4 rounded-2xl border-2 transition-all',
             activeService === 'chaekbada'
-              ? "bg-emerald-50 border-emerald-200 shadow-md"
-              : "bg-white border-emerald-100 hover:border-emerald-200"
+              ? 'bg-emerald-50 border-emerald-200 shadow-md'
+              : 'bg-white border-emerald-100 hover:border-emerald-200'
           )}
         >
           <div className="flex items-center gap-2 mb-1">
@@ -54,11 +54,15 @@ export function LibraryServiceGuide() {
             <CreditCard className="w-24 h-24 rotate-12" />
           </div>
           <div className="flex items-center gap-2 mb-2">
-            <span className="bg-amber-100 text-amber-700 text-[10px] font-black px-2 py-0.5 rounded-md">💳 전국 통합 회원증</span>
+            <span className="bg-amber-100 text-amber-700 text-[10px] font-black px-2 py-0.5 rounded-md">
+              💳 전국 통합 회원증
+            </span>
             <h4 className="font-black text-gray-900">책이음 서비스</h4>
           </div>
           <p className="text-xs text-gray-600 leading-relaxed font-medium">
-            살고 있는 지역에 상관없이, **책이음 회원권 하나만 있으면** 전국 참여 도서관 어디서든 별도 가입 없이 책을 빌릴 수 있어요. 한 번만 가입하면 전국 도서관이 내 집 앞 도서관이 됩니다!
+            살고 있는 지역에 상관없이, **책이음 회원권 하나만 있으면** 전국 참여 도서관 어디서든
+            별도 가입 없이 책을 빌릴 수 있어요. 한 번만 가입하면 전국 도서관이 내 집 앞 도서관이
+            됩니다!
           </p>
         </div>
       )}
@@ -70,12 +74,15 @@ export function LibraryServiceGuide() {
             <Ship className="w-24 h-24 -rotate-12" />
           </div>
           <div className="flex items-center gap-2 mb-2">
-            <span className="bg-emerald-100 text-emerald-700 text-[10px] font-black px-2 py-0.5 rounded-md">🌊 국가 상호대차</span>
+            <span className="bg-emerald-100 text-emerald-700 text-[10px] font-black px-2 py-0.5 rounded-md">
+              🌊 국가 상호대차
+            </span>
             <h4 className="font-black text-gray-900">책바다 서비스</h4>
           </div>
           <p className="text-xs text-gray-600 leading-relaxed font-medium">
-            원하는 책이 우리 동네에 없나요? 전국의 다른 도서관 책을 **집 근처 도서관으로 택배 배달**해 드려요.
-            <br/>
+            원하는 책이 우리 동네에 없나요? 전국의 다른 도서관 책을 **집 근처 도서관으로 택배
+            배달**해 드려요.
+            <br />
             <span className="inline-block mt-2 text-[11px] text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded">
               💰 비용: 왕복 약 5,200원 (지자체에 따라 할인/지원 가능)
             </span>

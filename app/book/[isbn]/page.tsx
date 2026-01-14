@@ -1,8 +1,8 @@
-import { Metadata } from "next";
-import { bookRepository } from "@/entities/book/repository/book.repository.impl";
-import { BookDetailClient } from "./book-detail-client";
-import { Card, CardContent } from "@/shared/ui/card";
-import { BookOpen } from "lucide-react";
+import { Metadata } from 'next';
+import { bookRepository } from '@/entities/book/repository/book.repository.impl';
+import { BookDetailClient } from './book-detail-client';
+import { Card, CardContent } from '@/shared/ui/card';
+import { BookOpen } from 'lucide-react';
 
 interface BookDetailPageProps {
   params: Promise<{ isbn: string }>;
@@ -14,17 +14,19 @@ export async function generateMetadata({ params }: BookDetailPageProps): Promise
 
   if (!book) {
     return {
-      title: "책을 찾을 수 없습니다",
+      title: '책을 찾을 수 없습니다',
     };
   }
 
   return {
     title: `${book.title} - 우리 가족 도서관`,
-    description: book.description || `${book.author}의 ${book.title}. 우리 동네 도서관에서 대출 가능 여부를 확인하세요.`,
+    description:
+      book.description ||
+      `${book.author}의 ${book.title}. 우리 동네 도서관에서 대출 가능 여부를 확인하세요.`,
     openGraph: {
       title: book.title,
       description: book.description || `${book.author}의 ${book.title}`,
-      type: "book",
+      type: 'book',
       authors: book.author ? [book.author] : [],
     },
   };

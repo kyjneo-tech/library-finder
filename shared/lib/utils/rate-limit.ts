@@ -17,7 +17,7 @@ let lastCleanup = Date.now();
 function cleanupExpiredRecords() {
   const now = Date.now();
   if (now - lastCleanup < CLEANUP_INTERVAL) return;
-  
+
   lastCleanup = now;
   for (const [ip, record] of rateLimitMap.entries()) {
     if (now > record.resetTime) {
@@ -33,27 +33,23 @@ function cleanupExpiredRecords() {
  * @param windowMs 윈도우 시간 (기본: 60초)
  * @returns 요청 허용 여부
  */
-export function checkRateLimit(
-  ip: string,
-  limit: number = 100,
-  windowMs: number = 60000
-): boolean {
+export function checkRateLimit(ip: string, limit: number = 100, windowMs: number = 60000): boolean {
   cleanupExpiredRecords();
-  
+
   const now = Date.now();
   const record = rateLimitMap.get(ip);
-  
+
   // 새 레코드 또는 만료된 레코드
   if (!record || now > record.resetTime) {
     rateLimitMap.set(ip, { count: 1, resetTime: now + windowMs });
     return true;
   }
-  
+
   // 제한 초과
   if (record.count >= limit) {
     return false;
   }
-  
+
   // 카운트 증가
   record.count++;
   return true;
