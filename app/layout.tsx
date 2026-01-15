@@ -25,24 +25,24 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   metadataBase: new URL('https://woorilib.com'),
   title: {
-    template: '%s | 우리 가족 도서관',
-    default: '우리 가족 도서관 | 동네 도서관 대출 현황 및 맞춤 책 추천',
+    template: '%s | 우리도서관',
+    default: '우리도서관 | 내 손안의 공공도서관',
   },
   description:
     '내 주변 도서관 대출 현황 실시간 확인! 영유아부터 성인까지 온 가족을 위한 맞춤형 도서 추천 서비스를 제공합니다.',
   keywords: [
+    '우리도서관',
     '도서관',
     '도서관검색',
     '대출가능조회',
     '책이음',
     '책바다',
-    '그림책추천',
-    '베스트셀러',
+    '책육아',
     '공공도서관',
   ],
-  authors: [{ name: 'Library Finder' }],
-  creator: 'Library Finder',
-  publisher: 'Library Finder',
+  authors: [{ name: 'Woori Library' }],
+  creator: 'Woori Library',
+  publisher: 'Woori Library',
   robots: {
     index: true,
     follow: true,
@@ -55,19 +55,19 @@ export const metadata: Metadata = {
     },
   },
   openGraph: {
-    title: '우리 가족 도서관',
+    title: '우리도서관',
     description:
-      '내 주변 도서관 대출 현황 실시간 확인! 영유아부터 성인까지 온 가족을 위한 맞춤형 도서 추천 서비스를 제공합니다.',
+      '내 손안의 공공도서관, 우리도서관! 책육아부터 전문서적까지 전국 도서관을 통합 검색하세요.',
     url: 'https://woorilib.com',
-    siteName: '우리 가족 도서관',
+    siteName: '우리도서관',
     locale: 'ko_KR',
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
-    title: '우리 가족 도서관',
+    title: '우리도서관',
     description:
-      '내 주변 도서관 대출 현황 실시간 확인! 영유아부터 성인까지 온 가족을 위한 맞춤형 도서 추천 서비스를 제공합니다.',
+      '내 손안의 공공도서관, 우리도서관! 책육아부터 전문서적까지 전국 도서관을 통합 검색하세요.',
   },
   verification: {
     google: 'lgrYKoxQ9rWQHtQEBWV37D8ccvFxt_3fxXJiHcqme7w',
@@ -82,7 +82,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: '우리 가족 도서관',
+    title: '우리도서관',
   },
 };
 

@@ -4,7 +4,7 @@ import { ImageResponse } from 'next/og';
 export const runtime = 'edge';
 
 // Image metadata
-export const alt = '우리 가족 도서관';
+export const alt = '우리도서관';
 export const size = {
   width: 1200,
   height: 630,
@@ -43,26 +43,27 @@ export default async function Image() {
           border: '1px solid #e2e8f0',
         }}
       >
+// Palette: Wisdom Purple (#a855f7), Warmth Orange (#f97316)
         <div style={{ fontSize: 80, marginBottom: 20 }}>📚</div>
         <div
           style={{
             fontSize: 60,
             fontWeight: 900,
-            color: '#1e293b', // slate-800
+            color: '#a855f7', // Wisdom Purple
             marginBottom: 10,
             letterSpacing: '-0.02em',
           }}
         >
-          우리 가족 도서관
+          우리도서관
         </div>
         <div
           style={{
             fontSize: 30,
-            color: '#64748b', // slate-500
+            color: '#475569', // slate-600
             marginTop: 10,
           }}
         >
-          동네 도서관 실시간 대출 확인 & 맞춤 추천
+          내 손안의 공공도서관
         </div>
       </div>
 

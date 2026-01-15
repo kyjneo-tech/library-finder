@@ -114,10 +114,10 @@ export function HomeHeader({
             </motion.div>
             <div>
               <h1 className="text-lg sm:text-xl font-extrabold bg-gradient-to-r from-wisdom-600 to-warmth-600 bg-clip-text text-transparent tracking-tight whitespace-nowrap">
-                우리 가족 도서관
+                우리도서관
               </h1>
               <p className="text-[10px] sm:text-xs font-bold text-gray-500 hidden sm:block">
-                아이부터 할머니까지, 모두의 책방
+                내 손안의 공공도서관
               </p>
             </div>
           </motion.button>
