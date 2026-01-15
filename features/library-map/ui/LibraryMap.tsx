@@ -1,8 +1,10 @@
 'use client';
 
-import { useEffect, useRef, useMemo, useCallback } from 'react';
+import { useEffect, useRef, useMemo, useCallback, useState } from 'react';
 import { useMapStore } from '../lib/use-map-store';
 import { useRegionStore } from '@/features/region-selector/lib/use-region-store';
+import { mapKakaoRegionToInternalCode } from '@/shared/lib/utils/reverse-geocoding';
+import { RefreshCcw } from 'lucide-react';
 
 declare global {
   interface Window {
@@ -14,12 +16,16 @@ interface LibraryMapProps {
   libraries?: any[];
   onZoomChange?: (level: number) => void; // 🛡️ 줌 레벨 변경 콜백
   userLocation?: { lat: number; lng: number } | null; // 사용자 위치
+  serviceFilter?: 'all' | 'chaekium' | 'chaekbada';
+  onSearchArea?: (regionCode: string) => Promise<void> | void; // 🛡️ 지도 기반 재검색 콜백
 }
 
 export function LibraryMap({
   libraries: externalLibraries,
   onZoomChange,
   userLocation: propsUserLocation,
+  serviceFilter,
+  onSearchArea,
 }: LibraryMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const {
@@ -40,22 +46,20 @@ export function LibraryMap({
   const geocodingInProgressRef = useRef<boolean>(false); // 🛡️ Geocoding 진행 중 플래그
   const isMapInitializedRef = useRef<boolean>(false); // 🛡️ 지도 초기화 완료 여부
   const lastZoomLevelRef = useRef<number>(0); // 🛡️ 마지막 줌 레벨 저장
+  const [isMapReady, setIsMapReady] = useState<boolean>(false); // 🛡️ 지도 초기화 상태 (Ref -> State 변경으로 렌더링 트리거)
+  const hasPannedToUserRef = useRef<boolean>(false); // 🛡️ 사용자 위치로 이동 완료 여부
+  
+  // 📍 지도 재검색 관련 상태
+  const [showSearchButton, setShowSearchButton] = useState<boolean>(false);
+  const lastSearchCenterRef = useRef<{ lat: number, lng: number } | null>(null);
+  const lastSearchZoomRef = useRef<number>(0); // 🛡️ 마지막 검색 시 줌 레벨
+  const [isSearching, setIsSearching] = useState<boolean>(false);
 
   // 🛡️ 사용자 위치: props > store 우선
   const userLocation = propsUserLocation ?? storeUserLocation;
 
   // 🛡️ 표시할 도서관 목록 결정 (props가 있으면 우선 사용)
   const displayLibraries = externalLibraries || storeLibraries;
-
-  // 🔍 DEBUG: 데이터 흐름 추적
-  console.log(`[LibraryMap] 📊 Data Flow Debug:`, {
-    externalLibraries: externalLibraries?.length ?? 'undefined',
-    storeLibraries: storeLibraries?.length ?? 0,
-    displayLibraries: displayLibraries?.length ?? 0,
-    selectedRegion: selectedRegion?.name,
-    selectedSubRegion: selectedSubRegion?.name,
-    selectedDistrict: selectedDistrict?.name,
-  });
 
   // 🛡️ onZoomChange를 ref로 저장하여 최신 값 참조
   const onZoomChangeRef = useRef(onZoomChange);
@@ -71,21 +75,24 @@ export function LibraryMap({
     const initMap = () => {
       if (!window.kakao || !window.kakao.maps) return;
 
+      // 초기 중심좌표 설정 (사용자 위치 있으면 거기, 없으면 서울시청)
+      const initialCenter = userLocation 
+        ? new window.kakao.maps.LatLng(userLocation.lat, userLocation.lng)
+        : new window.kakao.maps.LatLng(37.566826, 126.9786567);
+
       console.log(
-        `[LibraryMap] Initializing map with center: ${userLocation?.lat || 37.566826}, ${userLocation?.lng || 126.9786567}`
+        `[LibraryMap] Initializing map with center: ${initialCenter.toString()}`
       );
 
       const options = {
-        center: new window.kakao.maps.LatLng(
-          userLocation?.lat || 37.566826,
-          userLocation?.lng || 126.9786567
-        ),
-        level: 4, // 🛡️ 초기 줌 레벨을 동네 단위(4)로 설정
+        center: initialCenter,
+        level: userLocation ? 5 : 8, // 내 위치면 좀 더 상세하게(5), 서울 전체면 넓게(8)
       };
 
       const map = new window.kakao.maps.Map(mapContainer.current, options);
       mapRef.current = map;
-      isMapInitializedRef.current = true; // 🛡️ 초기화 완료 표시
+      isMapInitializedRef.current = true;
+      setIsMapReady(true); // 🛡️ 상태 업데이트로 다른 useEffect 트리거
 
       console.log(`[LibraryMap] Map initialized successfully`);
 
@@ -109,8 +116,12 @@ export function LibraryMap({
         }, 500); // 0.5초 대기 후 실행
       });
 
+      // 레이아웃 재조정
       setTimeout(() => {
         map.relayout();
+        if (userLocation) {
+             hasPannedToUserRef.current = true;
+        }
       }, 100);
     };
 
@@ -130,14 +141,92 @@ export function LibraryMap({
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  // 🛡️ [Fix] 지역이나 필터가 바뀌면 "새로운 검색"으로 간주하여 지도 이동 강제 허용
+  useEffect(() => {
+    console.log(`[LibraryMap] Region/Filter changed. Resetting interaction flags to force auto-fit.`);
+    initialBoundsSetRef.current = false;
+    isUserInteractingRef.current = false;
+  }, [selectedRegion, selectedDistrict, serviceFilter]);
+
+  // 🛡️ 드래그/줌 시작 시 사용자 인터랙션 플래그 설정
+  const isUserInteractingRef = useRef<boolean>(false);
+  
+  useEffect(() => {
+    if (!mapRef.current || !window.kakao || !window.kakao.maps) return;
+    
+    const map = mapRef.current;
+    const dragStartHandler = () => { isUserInteractingRef.current = true; };
+    const zoomStartHandler = () => { isUserInteractingRef.current = true; };
+    
+    // ⚠️ 중요: 목록이 완전히 바뀌면(예: 새 검색) 다시 자동 조정을 허용해야 함
+    // 이것은 displayLibraries가 변경될 때 처리
+    
+    window.kakao.maps.event.addListener(map, 'dragstart', dragStartHandler);
+    window.kakao.maps.event.addListener(map, 'zoom_start', zoomStartHandler);
+    
+    return () => {
+      try {
+        window.kakao.maps.event.removeListener(map, 'dragstart', dragStartHandler);
+        window.kakao.maps.event.removeListener(map, 'zoom_start', zoomStartHandler);
+      } catch (e) {}
+    };
+  }, [mapRef.current]);
+
+  // 🛡️ 내 위치 마커를 위한 Ref (독립적 관리)
+  const userOverlayRef = useRef<any>(null);
+
+  // 📍 [Fix] 내 위치 마커 표시 로직 (지도 준비완료 + 위치 있으면 무조건 표시)
+  useEffect(() => {
+    if (!isMapReady || !mapRef.current || !window.kakao || !window.kakao.maps) return;
+
+    // 기존 내 위치 마커 제거
+    if (userOverlayRef.current) {
+      userOverlayRef.current.setMap(null);
+      userOverlayRef.current = null;
+    }
+
+    if (!userLocation) return;
+
+    const userPosition = new window.kakao.maps.LatLng(userLocation.lat, userLocation.lng);
+      
+    // 내 위치 마커 디자인 (파란 점 + 펄스 효과)
+    const svgContent = `
+      <div style="position: relative; width: 24px; height: 24px;">
+         <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 14px; height: 14px; background-color: #3b82f6; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.2); z-index: 2;"></div>
+         <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 24px; height: 24px; background-color: rgba(59, 130, 246, 0.4); border-radius: 50%; animation: pulse 1.5s infinite; z-index: 1;"></div>
+      </div>
+      <style>
+        @keyframes pulse {
+          0% { transform: translate(-50%, -50%) scale(0.8); opacity: 0.8; }
+          100% { transform: translate(-50%, -50%) scale(1.5); opacity: 0; }
+        }
+      </style>
+    `;
+      
+    const userOverlayContent = document.createElement('div');
+    userOverlayContent.innerHTML = svgContent;
+    userOverlayContent.style.pointerEvents = 'none'; // 클릭 방해 안 함
+
+    const userOverlay = new window.kakao.maps.CustomOverlay({
+      position: userPosition,
+      content: userOverlayContent,
+      map: mapRef.current,
+      zIndex: 1, // 마커 아래, 지도 위
+    });
+      
+    userOverlayRef.current = userOverlay;
+
+    // Cleanup when component unmounts or location changes
+    return () => {
+      if (userOverlayRef.current) {
+        userOverlayRef.current.setMap(null);
+      }
+    };
+  }, [userLocation, isMapReady]); // isMapReady 추가 -> 지도 로드 직후 실행 보장
+
   // 마커 및 오버레이 렌더링 & 지도 범위 재설정
   useEffect(() => {
-    console.log(
-      `[LibraryMap useEffect-markers] Triggered. displayLibraries.length: ${displayLibraries.length}, initialBoundsSetRef: ${initialBoundsSetRef.current}`
-    );
-
-    if (!mapRef.current || !window.kakao || !window.kakao.maps) {
-      console.log(`[LibraryMap useEffect-markers] Map not ready`);
+    if (!isMapReady || !mapRef.current || !window.kakao || !window.kakao.maps) {
       return;
     }
 
@@ -145,9 +234,7 @@ export function LibraryMap({
     eventListenersRef.current.forEach(({ marker, listener }) => {
       try {
         window.kakao.maps.event.removeListener(marker, 'click', listener);
-      } catch (e) {
-        console.warn('[LibraryMap] Failed to remove listener:', e);
-      }
+      } catch (e) {}
     });
     eventListenersRef.current = [];
 
@@ -158,10 +245,17 @@ export function LibraryMap({
     overlaysRef.current = [];
 
     if (displayLibraries.length === 0) {
-      console.log(
-        `[LibraryMap useEffect-markers] No libraries to display. Resetting initialBoundsSetRef`
-      );
-      initialBoundsSetRef.current = false;
+      // 목록이 비었을 때 플래그 초기화
+      initialBoundsSetRef.current = false; 
+      isUserInteractingRef.current = false; 
+
+      // 목록이 0개이고 사용자 위치가 있으면 사용자 위치로 이동
+      if (userLocation && !hasPannedToUserRef.current && !isUserInteractingRef.current) {
+         console.log('[LibraryMap] No libraries. Panning to user location as fallback.');
+         const loc = new window.kakao.maps.LatLng(userLocation.lat, userLocation.lng);
+         mapRef.current.setCenter(loc);
+         hasPannedToUserRef.current = true;
+      }
       return;
     }
 
@@ -169,9 +263,6 @@ export function LibraryMap({
     let hasValidPosition = false;
 
     displayLibraries.forEach((lib) => {
-      // 위경도가 없는 경우 (API 데이터 누락 등)
-      // 임시적으로: 위경도가 없으면 지도에 표시 불가.
-      // TODO: 실제로는 주소 -> 좌표 변환이 필요할 수 있음.
       if (!lib.latitude || !lib.longitude) return;
 
       const position = new window.kakao.maps.LatLng(lib.latitude, lib.longitude);
@@ -185,7 +276,7 @@ export function LibraryMap({
         clickable: true,
       });
 
-      // 커스텀 오버레이 컨텐츠 (대출 가능 여부 등 표시)
+      // 커스텀 오버레이
       let content = `<div style="padding:5px; background:white; border:1px solid #ccc; border-radius:5px; font-size:12px; font-weight:bold; white-space:nowrap;">${lib.libName || lib.libraryName}</div>`;
 
       if (lib.loanAvailable !== undefined) {
@@ -200,26 +291,17 @@ export function LibraryMap({
       const overlay = new window.kakao.maps.CustomOverlay({
         content: content,
         position: position,
-        yAnchor: 2.2, // 마커 위쪽으로 띄움
+        yAnchor: 2.2,
         map: mapRef.current,
       });
 
-      // 🛡️ 디바운싱이 적용된 클릭 핸들러
       const clickHandler = () => {
         const now = Date.now();
-        // 300ms 이내의 중복 클릭 무시 (디바운싱)
-        if (now - lastClickTimeRef.current < 300) {
-          console.log(
-            `[LibraryMap] Debounced click ignored for: ${lib.libName || lib.libraryName}`
-          );
-          return;
-        }
+        if (now - lastClickTimeRef.current < 300) return;
         lastClickTimeRef.current = now;
-        console.log(`[LibraryMap] Marker clicked: ${lib.libName || lib.libraryName}`);
         setSelectedLibrary(lib);
       };
 
-      // 이벤트 리스너 등록 및 참조 저장
       window.kakao.maps.event.addListener(marker, 'click', clickHandler);
       eventListenersRef.current.push({ marker, listener: clickHandler });
 
@@ -227,36 +309,37 @@ export function LibraryMap({
       overlaysRef.current.push(overlay);
     });
 
-    // 🛡️ 모든 마커가 보이도록 지도 범위 재설정
-    // 단, 최초 1회만 실행 (이후에는 사용자가 선택한 도서관 위치를 유지)
-    if (hasValidPosition && !initialBoundsSetRef.current) {
-      console.log(
-        `[LibraryMap useEffect-markers] Setting bounds for ${displayLibraries.length} libraries`
-      );
-      console.log(
-        `[LibraryMap useEffect-markers] BEFORE setBounds - Current center: (${mapRef.current.getCenter().getLat()}, ${mapRef.current.getCenter().getLng()})`
-      );
+    // 🛡️ 지도 범위 및 카메라 뷰 업데이트 (Centralized Logic)
+    if (hasValidPosition) {
+       // initialBoundsSetRef가 false이면(새 검색 or 리셋) 무조건 이동
+       if (!initialBoundsSetRef.current || !isUserInteractingRef.current) {
+          console.log(`[LibraryMap] Auto-fitting bounds (Force: ${!initialBoundsSetRef.current}, UserInteracting: ${isUserInteractingRef.current})`);
+          
+          mapRef.current.setBounds(bounds);
+          initialBoundsSetRef.current = true;
 
-      mapRef.current.setBounds(bounds);
-      initialBoundsSetRef.current = true;
+          // 2. [Policy] 서비스 필터에 따른 뷰 정책 적용 (책이음/책바다는 넓은 뷰 보장)
+          if (serviceFilter === 'chaekium' || serviceFilter === 'chaekbada') {
+             requestAnimationFrame(() => {
+                 if (!mapRef.current) return;
+                 
+                 const currentLevel = mapRef.current.getLevel();
+                 // 타겟 레벨: 시/도 단위가 넉넉히 보이는 레벨 10
+                 const TARGET_MIN_LEVEL = 10; 
+                 
+                 console.log(`[LibraryMap] View Policy Check (${serviceFilter}): Current ${currentLevel} vs Target ${TARGET_MIN_LEVEL}`);
 
-      // setBounds 후 중심 확인 (비동기일 수 있으므로 setTimeout)
-      setTimeout(() => {
-        const newCenter = mapRef.current.getCenter();
-        console.log(
-          `[LibraryMap useEffect-markers] AFTER setBounds - New center: (${newCenter.getLat()}, ${newCenter.getLng()}), Level: ${mapRef.current.getLevel()}`
-        );
-      }, 100);
-
-      console.log(
-        `[LibraryMap useEffect-markers] ✅ Initial bounds set for ${displayLibraries.length} libraries`
-      );
-    } else if (!hasValidPosition) {
-      console.log(`[LibraryMap useEffect-markers] ⚠️ No valid positions found`);
-    } else if (initialBoundsSetRef.current) {
-      console.log(`[LibraryMap useEffect-markers] ⏭️ Skipping setBounds (already set)`);
+                 if (currentLevel < TARGET_MIN_LEVEL) {
+                    console.log(`[LibraryMap] 🔭 Enforcing Wide View (Level ${TARGET_MIN_LEVEL})`);
+                    mapRef.current.setLevel(TARGET_MIN_LEVEL, { animate: true });
+                 }
+             });
+          }
+       } else {
+         console.log(`[LibraryMap] User interacting & already bounded. Skipping auto-fit.`);
+       }
     }
-  }, [displayLibraries]);
+  }, [displayLibraries, userLocation, isMapReady]);
 
   // 🛡️ 선택된 도서관이 변경되면 지도 이동
   useEffect(() => {
@@ -277,5 +360,113 @@ export function LibraryMap({
     }
   }, [selectedLibrary]);
 
-  return <div ref={mapContainer} className="w-full h-full" />;
+  // 🛡️ 지도 이동 감지 (재검색 버튼 표시)
+  useEffect(() => {
+    if (!isMapReady || !mapRef.current || !onSearchArea) return;
+
+    const map = mapRef.current;
+    
+    // 초기 중심점 및 줌 레벨 저장
+    if (!lastSearchCenterRef.current) {
+        const center = map.getCenter();
+        lastSearchCenterRef.current = { lat: center.getLat(), lng: center.getLng() };
+        lastSearchZoomRef.current = map.getLevel();
+    }
+
+    const handleMapChange = () => {
+       if (!lastSearchCenterRef.current) return;
+       
+       const center = map.getCenter();
+       const lat = center.getLat();
+       const lng = center.getLng();
+       const zoom = map.getLevel();
+       
+       // 1. 거리 차이 (약 2km)
+       const diffLat = Math.abs(lat - lastSearchCenterRef.current.lat);
+       const diffLng = Math.abs(lng - lastSearchCenterRef.current.lng);
+       
+       // 2. 줌 레벨 차이 (1단계 이상)
+       const diffZoom = Math.abs(zoom - lastSearchZoomRef.current);
+       
+       if (diffLat > 0.02 || diffLng > 0.02 || diffZoom >= 1) {
+          setShowSearchButton(true);
+       }
+    };
+
+    // 'idle' 이벤트가 편하지만 카카오맵엔 없으므로 dragend + zoom_changed 사용 (디바운싱 필요 없음, 상태값만 변경)
+    window.kakao.maps.event.addListener(map, 'dragend', handleMapChange);
+    window.kakao.maps.event.addListener(map, 'zoom_changed', handleMapChange);
+
+    return () => {
+        try {
+            window.kakao.maps.event.removeListener(map, 'dragend', handleMapChange);
+            window.kakao.maps.event.removeListener(map, 'zoom_changed', handleMapChange);
+        } catch(e) {}
+    }
+  }, [isMapReady, onSearchArea]);
+
+  // 📍 "이 지역에서 재검색" 핸들러
+  const handleSearchCurrentArea = useCallback(() => {
+    if (!mapRef.current || !window.kakao.maps.services || !onSearchArea) return;
+
+    setIsSearching(true);
+    const center = mapRef.current.getCenter();
+    const geocoder = new window.kakao.maps.services.Geocoder();
+
+    geocoder.coord2RegionCode(center.getLng(), center.getLat(), (result: any[], status: any) => {
+        if (status === window.kakao.maps.services.Status.OK) {
+            // 법정동/행정동 정보 중 '행정동(H)' 또는 '법정동(B)' 모두 올 수 있음.
+            // 보통 API 결과 배열의 첫 번째 요소나 region_type을 확인
+            // result[0]이 보통 가장 상세한 주소
+            
+            const item = result.find(r => r.region_type === 'H') || result[0];
+            
+            if (item) {
+                console.log(`[LibraryMap] Reverse Geocoding: ${item.region_1depth_name} ${item.region_2depth_name}`);
+                
+                const internalCode = mapKakaoRegionToInternalCode(item.region_1depth_name, item.region_2depth_name);
+                
+                if (internalCode) {
+                    console.log(`[LibraryMap] Internal Code Found: ${internalCode.code} (${internalCode.name})`);
+                    
+                    // onSearchArea는 async일 수도 있고 아닐 수도 있음 (HomeMapSection에서는 async)
+                    Promise.resolve(onSearchArea(internalCode.code))
+                    .finally(() => {
+                        setIsSearching(false);
+                        setShowSearchButton(false);
+                        lastSearchCenterRef.current = { lat: center.getLat(), lng: center.getLng() };
+                        lastSearchZoomRef.current = mapRef.current?.getLevel() || 0;
+                    });
+                } else {
+                     console.warn(`[LibraryMap] No internal code mapped.`);
+                     setIsSearching(false);
+                }
+            }
+        } else {
+            console.error('[LibraryMap] Reverse Geocoding Failed');
+            setIsSearching(false);
+        }
+    });
+
+  }, [onSearchArea]);
+
+  return (
+    <div className="relative w-full h-full group">
+       <div ref={mapContainer} className="w-full h-full" />
+       
+       {/* 📍 이 지역에서 다시 검색 버튼 */}
+       {showSearchButton && (
+         <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-20 animate-in fade-in slide-in-from-top-2 duration-300">
+            <button
+              onClick={handleSearchCurrentArea}
+              disabled={isSearching}
+              className="flex items-center gap-2 px-4 py-2 bg-white text-purple-700 rounded-full shadow-lg border border-purple-100 hover:bg-purple-50 hover:scale-105 active:scale-95 transition-all disabled:opacity-70 disabled:cursor-not-allowed"
+            >
+              <RefreshCcw className={`w-3.5 h-3.5 ${isSearching ? 'animate-spin' : ''}`} />
+              <span className="text-xs font-black">이 지역에서 다시 검색</span>
+            </button>
+         </div>
+       )}
+    </div>
+  );
 }

@@ -47,18 +47,51 @@ export class LibraryApiClient {
       }
     });
 
-    // 3. Execute request
+    // 3. Execute request with Retry Logic
     const requestPromise = (async () => {
       try {
-        const response = await fetch(url.toString());
-        if (!response.ok) {
-          throw new Error(`API Error [${response.status}]: ${response.statusText}`);
+        let attempts = 0;
+        const MAX_RETRIES = 3;
+        const BASE_DELAY = 1000;
+
+        while (attempts < MAX_RETRIES) {
+          try {
+            const response = await fetch(url.toString());
+            
+            if (response.status === 429) {
+               console.warn(`[LibraryApiClient] 429 Too Many Requests. Retrying... (${attempts + 1}/${MAX_RETRIES})`);
+               const delay = BASE_DELAY * Math.pow(2, attempts);
+               await new Promise(resolve => setTimeout(resolve, delay));
+               attempts++;
+               continue;
+            }
+
+            if (!response.ok) {
+              if (response.status >= 500 && attempts < MAX_RETRIES) {
+                 console.warn(`[LibraryApiClient] Server Error ${response.status}. Retrying... (${attempts + 1}/${MAX_RETRIES})`);
+                 const delay = BASE_DELAY * Math.pow(2, attempts);
+                 await new Promise(resolve => setTimeout(resolve, delay));
+                 attempts++;
+                 continue;
+              }
+              throw new Error(`API Error [${response.status}]: ${response.statusText}`);
+            }
+
+            const data = await response.json();
+            // Cache success response
+            this.cache.set(cacheKey, { data, timestamp: Date.now() });
+            return data;
+          } catch (error: any) {
+             if (attempts < MAX_RETRIES && (error.name === 'TypeError' || error.message.includes('fetch'))) {
+                const delay = BASE_DELAY * Math.pow(2, attempts);
+                await new Promise(resolve => setTimeout(resolve, delay));
+                attempts++;
+                continue;
+             }
+             throw error;
+          }
         }
-        const data = await response.json();
-        
-        // Cache success response
-        this.cache.set(cacheKey, { data, timestamp: Date.now() });
-        return data;
+        throw new Error(`API Error: Max retries exceeded for ${endpoint}`);
       } finally {
         // Remove from pending validation regardless of success/failure
         this.pendingRequests.delete(cacheKey);

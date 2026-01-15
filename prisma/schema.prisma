@@ -44,3 +44,46 @@ model CachedPopularBook {
   @@index([category, regionCode])
   @@map("cached_popular_books")
 }
+
+// 4. 유저 프로필 (Supabase Auth 연동)
+model UserProfile {
+  id        String   @id @map("id") // Supabase Auth User ID (UUID)
+  email     String   @unique
+  name      String?
+  avatarUrl String?  @map("avatar_url")
+  provider  String?  // 'kakao', 'google' etc
+  
+  readStamps ReadStamp[]
+  
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("user_profiles")
+}
+
+// 5. 독서 기록 (Read Stamp)
+model ReadStamp {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  isbn      String
+  
+  // 책 메타데이터 스냅샷 (책 정보가 DB에 없을 경우 대비)
+  title     String
+  author    String?
+  bookImage String?  @map("book_image")
+  
+  emoji     String?  // '😆', '😭' 등
+  comment   String?  // 한줄평 (추후 확장)
+  
+  isPublic  Boolean  @default(true) @map("is_public") // 공개 여부
+  
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  
+  user      UserProfile @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, isbn]) // 유저당 책 하나에 스탬프 하나
+  @@index([userId])
+  @@index([isbn])
+  @@map("read_stamps")
+}

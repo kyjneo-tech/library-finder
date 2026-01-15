@@ -2,7 +2,7 @@
 
 import { useRef, useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { cn } from '@/shared/lib/utils';
+import { cn } from '@/shared/lib/cn';
 
 interface BookCarouselProps {
   children: React.ReactNode;

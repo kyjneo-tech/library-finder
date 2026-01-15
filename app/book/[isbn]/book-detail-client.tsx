@@ -4,6 +4,7 @@ import { motion, useInView } from 'framer-motion';
 import { BookOpen, User, Calendar, Building2, TrendingUp } from 'lucide-react';
 import { useRef, useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card';
+import { ReadStampButton } from '@/features/reading-record/ui/read-stamp-button';
 import { Badge } from '@/shared/ui/badge';
 import { Book } from '@/entities/book/model/types';
 import { staggerContainer, staggerItem, floatingCard } from '@/shared/lib/animations/variants';
@@ -134,13 +135,21 @@ export function BookDetailClient({ book, availability }: BookDetailClientProps) 
                     )}
                   </motion.div>
 
-                  {/* 배지 & 통계 */}
+                  {/* 배지 & 통계 & 읽었어요 버튼 */}
                   <motion.div
-                    className="flex gap-2 flex-wrap pt-2"
+                    className="flex gap-2 flex-wrap pt-2 items-center"
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.4 }}
                   >
+                    <ReadStampButton 
+                      book={{
+                        isbn: book.isbn13 || book.isbn,
+                        title: book.title,
+                        author: book.author || '',
+                        image: book.bookImageURL || '',
+                      }}
+                    />
                     {book.className && (
                       <Badge className="bg-gradient-purple text-white border-0 shadow-glow-purple">
                         {book.className}

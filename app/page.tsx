@@ -40,6 +40,7 @@ import { HomeFavorites } from '@/features/home/ui/HomeFavorites';
 import { HomeSearchSection } from '@/features/home/ui/HomeSearchSection';
 import { HomeMapSection } from '@/features/home/ui/HomeMapSection';
 import { useRegionValidation } from '@/shared/lib/hooks/use-region-validation';
+import { ReadStampButton } from '@/features/reading-record/ui/read-stamp-button';
 
 export default function HomePage() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -322,14 +323,7 @@ export default function HomePage() {
   // 🛡️ 대출 가능 여부 필터 상태 (책이음/책바다의 경우 기본값 true)
   const [onlyAvailable, setOnlyAvailable] = useState(false);
 
-  // 서비스 필터 변경 시 onlyAvailable 기본값 설정
-  useEffect(() => {
-    if (serviceFilter === 'chaekium' || serviceFilter === 'chaekbada') {
-      setOnlyAvailable(true);
-    } else {
-      setOnlyAvailable(false);
-    }
-  }, [serviceFilter]);
+
 
   // 🛡️ 필터링된 도서관 목록 계산
   const filteredLibraries = useMemo(() => {
@@ -350,30 +344,9 @@ export default function HomePage() {
     });
   }, [librariesWithBook, serviceFilter, onlyAvailable]);
 
-  // 🛡️ 줌 레벨 변경 핸들러 (동적 검색 확장)
-  const handleZoomChange = async (level: number) => {
-    // 내 주변 모드일 때는 확장 검색 안 함
-    if (serviceFilter === 'all') return;
-
-    const targetIsbn = selectedBook?.isbn13 || selectedBook?.isbn;
-    if (!targetIsbn) return;
-
-    // 레벨이 높을수록 줌 아웃 (멀리 봄)
-    // Level 7: 구 단위 (약 2km) -> 이보다 크면 시/도 검색
-    // Level 11: 시/도 단위 (약 30km) -> 이보다 크면 전국 검색
-
-    if (level > 11) {
-       // 전국 검색
-       console.log('[HomePage] Zoom Level > 11: Searching Nationwide');
-       await searchLibrariesWithBook(targetIsbn as string, '', true, userLocation);
-    } else if (level > 7) {
-       // 시/도 검색
-       const regionCode = getRegionCode();
-       if (regionCode) {
-         console.log('[HomePage] Zoom Level > 7: Searching Province');
-         await searchLibrariesWithBook(targetIsbn as string, regionCode, true, userLocation);
-       }
-    }
+  // 🛡️ [Manual Search Logic] 줌 레벨이 변경되어도 자동 검색하지 않음 (유저가 버튼 클릭)
+  const handleZoomChange = (level: number) => {
+    // console.log(`[HomePage] Zoom Level Changed: ${level}`);
   };
 
 
@@ -390,15 +363,26 @@ export default function HomePage() {
     if (!selectedBook || !mounted) return;
     
     const regionCode = getRegionCode();
-    const isNationwide = serviceFilter === 'chaekium' || serviceFilter === 'chaekbada';
+    
+    // 🔍 [Logic Change] 
+    // 기존: 책이음/책바다는 무조건 전국 검색 or 상세 지역
+    // 변경: 책이음/책바다는 '기본 범위'를 '도/시' 단위(Province)로 넓혀서 보여줌
+    // 예: '광명시' 선택 -> '경기도' 전체에서 책이음/책바다 검색 (주변 도시 포함)
+    
+    let isNationwide = !regionCode;
+    let searchRegion = regionCode || '';
 
-    // 내 주변 모드인데 지역 코드가 없으면 검색 불가
-    if (!isNationwide && !regionCode) return;
+    // 책이음/책바다인 경우, 너무 좁은 지역(구/시)보다는 '도/광역' 단위로 넓혀서 검색
+    if ((serviceFilter === 'chaekium' || serviceFilter === 'chaekbada') && selectedRegion) {
+       searchRegion = selectedRegion.code; // 도/광역시 코드로 덮어씀 (예: 경기도)
+       isNationwide = false; // 전국은 아니지만 넓은 지역
+    }
+
+    // 지역 코드도 없고 전국 검색도 아니면 검색 불가 (방어 코드)
+    if (!isNationwide && !searchRegion) return;
 
     const targetIsbn = selectedBook.isbn13 || selectedBook.isbn;
     if (targetIsbn) {
-      // 책이음/책바다는 전국 단위 검색 (지역 제한 해제)
-      const searchRegion = isNationwide ? '' : regionCode!;
       searchLibrariesWithBook(targetIsbn, searchRegion, isNationwide, userLocation);
     }
   }, [
@@ -407,11 +391,12 @@ export default function HomePage() {
     selectedDistrict?.code,
     selectedBook,
     mounted,
-    serviceFilter,
+    serviceFilter, // 필터 변경 시에도 재검색 (필요할 경우)
     getRegionCode,
     searchLibrariesWithBook,
     userLocation,
   ]);
+
 
   
   const { isBookFavorite, addBook, removeBook } = useFavoritesStore();
@@ -522,24 +507,34 @@ export default function HomePage() {
                   <h3 className="font-extrabold text-2xl text-gray-900 leading-tight line-clamp-2">
                     {selectedBook.title}
                   </h3>
-                   <motion.button
-                    onClick={(e) => toggleBookFavorite(e, selectedBook)}
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.9 }}
-                    className={cn(
-                      'p-3 rounded-2xl border-2 transition-all shrink-0',
-                      isBookFavorite(selectedBook.isbn13 || selectedBook.isbn)
-                        ? 'bg-purple-100 border-purple-200 text-purple-600'
-                        : 'bg-gray-50 border-gray-100 text-gray-400 hover:border-purple-200'
-                    )}
-                  >
-                    <Bookmark
-                      className={cn(
-                        'w-6 h-6',
-                        isBookFavorite(selectedBook.isbn13 || selectedBook.isbn) && 'fill-current'
-                      )}
+                  <div className="flex items-center gap-2 shrink-0">
+                    <ReadStampButton
+                      book={{
+                        isbn: selectedBook.isbn13 || selectedBook.isbn,
+                        title: selectedBook.title,
+                        author: selectedBook.author || '',
+                        image: selectedBook.bookImageURL || '',
+                      }}
                     />
-                  </motion.button>
+                    <motion.button
+                      onClick={(e) => toggleBookFavorite(e, selectedBook)}
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
+                      className={cn(
+                        'p-3 rounded-2xl border-2 transition-all',
+                        isBookFavorite(selectedBook.isbn13 || selectedBook.isbn)
+                          ? 'bg-purple-100 border-purple-200 text-purple-600'
+                          : 'bg-gray-50 border-gray-100 text-gray-400 hover:border-purple-200'
+                      )}
+                    >
+                      <Bookmark
+                        className={cn(
+                          'w-6 h-6',
+                          isBookFavorite(selectedBook.isbn13 || selectedBook.isbn) && 'fill-current'
+                        )}
+                      />
+                    </motion.button>
+                  </div>
                 </div>
                 <p className="text-base font-bold text-purple-600 mb-2">{selectedBook.author}</p>
                  <div className="flex items-center gap-2 text-xs font-medium text-gray-400">
@@ -676,7 +671,7 @@ export default function HomePage() {
                     serviceFilter === 'all' ? 'bg-white text-gray-900 shadow-md' : 'text-gray-500'
                   )}
                 >
-                  내 주변
+                  소장 도서관
                 </button>
                   <button
                   onClick={() => {
@@ -887,11 +882,9 @@ export default function HomePage() {
                                    </span>
                                  );
                                })()}
-                               <span className="text-[10px] bg-purple-50 text-purple-600 px-2 py-1 rounded-lg font-black border border-purple-100">평일 오전 방문 권장 ✨</span>
-                               {services.isChaekium && <span className="text-[10px] bg-amber-50 text-amber-600 px-2 py-1 rounded-lg font-black border border-amber-100">💳 책이음</span>}
-                               {services.isChaekbada && <span className="text-[10px] bg-emerald-50 text-emerald-600 px-2 py-1 rounded-lg font-black border border-emerald-100">🌊 책바다</span>}
+
                             </div>
-                            {lib.homepage && <a href={lib.homepage} target="_blank" rel="noopener noreferrer" className="inline-flex items-center px-4 py-2 bg-gray-50 text-[11px] font-black text-gray-600 rounded-xl border border-gray-200 hover:bg-gray-100 transition-colors">도서관 상세정보 &gt;</a>}
+
                           </div>
                           <div className={cn("flex flex-col items-center gap-1.5 px-5 py-3 rounded-2xl text-[11px] font-black shrink-0 border-2 shadow-sm transition-all", lib.loanAvailable ? "bg-green-50 text-green-700 border-green-100" : "bg-red-50 text-red-600 border-red-100")}>
                             {lib.loanAvailable ? <><CheckCircle2 className="w-6 h-6 mb-0.5" /><span>대출가능!</span></> : <><XCircle className="w-6 h-6 mb-0.5" /><span>대출중</span></>}

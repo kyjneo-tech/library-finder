@@ -8,7 +8,7 @@ import { bookRepository } from '@/entities/book/repository/book.repository.impl'
 import { Skeleton } from '@/shared/ui/skeleton';
 import { BookCarousel } from '@/shared/ui/book-carousel';
 import { TrendingUp, Flame, BookOpen } from 'lucide-react';
-import { cn } from '@/shared/lib/utils';
+import { cn } from '@/shared/lib/cn';
 
 interface HotTrendBooksProps {
   onBookSelect: (book: Book) => void;

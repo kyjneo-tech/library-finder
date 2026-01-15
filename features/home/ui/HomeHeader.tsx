@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Library as LibraryIcon, Search, Sparkles, Home } from 'lucide-react';
 import { cn } from '@/shared/lib/cn';
@@ -12,6 +13,10 @@ import { useRegionStore } from '@/features/region-selector/lib/use-region-store'
 import { useMapStore } from '@/features/library-map/lib/use-map-store';
 import { useLibrarySearch } from '@/features/library/lib/use-library-search';
 import { useBookSearch } from '@/features/book-search/lib/use-book-search';
+import { useAuthStore } from '@/features/auth/lib/use-auth-store';
+import { useReadingRecord } from '@/features/reading-record/lib/use-reading-record';
+import { LoginButton } from '@/features/auth/ui/login-button';
+import { UserMenu } from '@/features/auth/ui/user-menu';
 
 interface HomeHeaderProps {
   searchQuery: string;
@@ -59,6 +64,20 @@ export function HomeHeader({
     setMode(newMode);
   };
 
+  /* eslint-disable react-hooks/exhaustive-deps */
+  const { user, initialize } = useAuthStore();
+  const { syncWithServer } = useReadingRecord();
+  
+  useEffect(() => {
+    initialize();
+  }, [initialize]);
+
+  useEffect(() => {
+    if (user) {
+      syncWithServer();
+    }
+  }, [user, syncWithServer]);
+
   return (
     <motion.header
       className="sticky top-0 z-30 glass border-b border-white/50 shadow-premium"
@@ -102,21 +121,28 @@ export function HomeHeader({
               </p>
             </div>
           </motion.button>
-          <div className="flex bg-white/60 backdrop-blur-lg rounded-2xl p-1 border border-wisdom-100/50 shrink-0 shadow-sm" role="tablist">
-            <motion.button
-              onClick={() => handleTabChange('kids')}
-              role="tab"
-              aria-selected={mode === 'kids'}
-              className={cn(
-                'px-2.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap relative overflow-hidden flex items-center gap-1.5',
-                mode === 'kids'
-                  ? 'bg-gradient-hero text-white shadow-glow-warmth'
-                  : 'text-gray-600 hover:text-warmth-600'
-              )}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              {mode === 'kids' && (
+
+          <div className="flex items-center gap-2">
+            {/* 로그인 / 유저 메뉴 */}
+            {user ? <UserMenu /> : <LoginButton />}
+          </div>
+        </motion.div>
+        
+        <div className="flex bg-white/60 backdrop-blur-lg rounded-2xl p-1 border border-wisdom-100/50 shadow-sm w-full" role="tablist">
+          <motion.button
+            onClick={() => handleTabChange('kids')}
+            role="tab"
+            aria-selected={mode === 'kids'}
+            className={cn(
+              'flex-1 px-2.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap relative overflow-hidden flex items-center justify-center gap-1.5',
+              mode === 'kids'
+                ? 'bg-gradient-hero text-white shadow-glow-warmth'
+                : 'text-gray-600 hover:text-warmth-600'
+            )}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
+             {mode === 'kids' && (
                 <motion.div
                   className="absolute inset-0 bg-white/20"
                   layoutId="activeTab"
@@ -131,7 +157,7 @@ export function HomeHeader({
               role="tab"
               aria-selected={mode === 'general'}
               className={cn(
-                'px-2.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap relative overflow-hidden flex items-center gap-1.5',
+                'flex-1 px-2.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap relative overflow-hidden flex items-center justify-center gap-1.5',
                 mode === 'general'
                   ? 'bg-gradient-purple text-white shadow-glow-purple'
                   : 'text-gray-600 hover:text-wisdom-600'
@@ -150,7 +176,6 @@ export function HomeHeader({
               <span className="relative z-10">우리 모두</span>
             </motion.button>
           </div>
-        </motion.div>
         
         <motion.div
           className="bg-white/50 rounded-2xl p-1"

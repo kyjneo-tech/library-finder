@@ -26,11 +26,26 @@ export function HomeMapSection({
   const { getRegionCode } = useRegionStore();
   const { selectedLibrary, setSelectedLibrary } = useMapStore();
 
+  const handleSearchArea = async (regionCode: string) => {
+    if (selectedBook) {
+      const isbn = selectedBook.isbn13 || selectedBook.isbn;
+      if (isbn) {
+        await searchLibrariesWithBook(isbn, regionCode, false, userLocation || undefined);
+      }
+    } else {
+      // 책이 선택되지 않았을 때의 동작 (추후 구현 or 현재는 책 선택 시만 노출됨)
+      console.log('No book selected, skipping search');
+    }
+  };
+
   return (
     <div className="mx-4 mt-6 h-[400px] rounded-[2rem] overflow-hidden border-4 border-white shadow-2xl bg-gray-100 relative group">
       <LibraryMap
         libraries={selectedBook ? librariesWithBook : undefined}
         onZoomChange={onZoomChange}
+        serviceFilter={serviceFilter}
+        userLocation={userLocation}
+        onSearchArea={handleSearchArea}
       />
       
       {/* 📍 '내 주변' 모드 뱃지 (책 미선택 시) */}

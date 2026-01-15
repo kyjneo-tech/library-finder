@@ -18,7 +18,10 @@ interface LibrarySearchState {
     isWideSearch?: boolean,
     userLocation?: { lat: number; lng: number } | null
   ) => Promise<void>;
-  searchLibrariesNationwide: (isbn: string) => Promise<void>;
+  searchLibrariesNationwide: (
+    isbn: string,
+    userLocation?: { lat: number; lng: number } | null
+  ) => Promise<void>;
   deepScan: (isbn: string, region: string) => Promise<void>;
   clearLibraries: () => void;
   mergeLibraries: (
@@ -37,10 +40,13 @@ export const useLibrarySearch = create<LibrarySearchState>((set, get) => ({
     isWideSearch: boolean = false,
     userLocation?: { lat: number; lng: number } | null
   ) => {
-    if (get().librariesLoading) return;
+    // 🛡️ 로딩 중이라도 위치 정보가 업데이트되면 재검색이 필요할 수 있음.
+    // 기존 가드 제거: if (get().librariesLoading) return;
+    
+    console.log(`[useLibrarySearch] searchLibrariesWithBook: ${isbn}, region: ${region}, wide: ${isWideSearch}, loc: ${userLocation ? `${userLocation.lat},${userLocation.lng}` : 'null'}`);
 
     if (!region) {
-      await get().searchLibrariesNationwide(isbn);
+      await get().searchLibrariesNationwide(isbn, userLocation);
       return;
     }
 
@@ -50,9 +56,44 @@ export const useLibrarySearch = create<LibrarySearchState>((set, get) => ({
         isWideSearch && region.length === 5 ? region.substring(0, 2) : region;
       const result = await bookRepository.getLibrariesWithBook(isbn, searchRegion);
 
-      const checkLimit = 5;
+      // 🚨 [Fallback] 해당 지역에 소장 도서관이 없을 때, 그 지역의 도서관 목록 표시 (대출 불가 상태로)
+      let targetLibraries = result.libraries;
+      let isFallback = false;
+
+      if (targetLibraries.length === 0 && !isWideSearch) {
+          // console.log(`[useLibrarySearch] No libraries found in region ${region}. Fetching all libraries for context.`);
+          const { libraryRepository } = await import('@/entities/library/repository/library.repository.impl');
+          
+          const filters: any = {};
+          if (region.length === 5) {
+             filters.dtl_region = region;
+             filters.region = region.substring(0, 2); 
+          } else {
+             filters.region = region;
+          }
+          
+          const fallbackResult = await libraryRepository.getLibraries(filters);
+          // Convert Library[] to BookAvailability[] (mock)
+          targetLibraries = fallbackResult.libraries.map(lib => ({
+             isbn: isbn, // ✅ Fix: Add missing isbn
+             libraryCode: lib.libCode,
+             libraryName: lib.libName,
+             address: lib.address,
+             tel: lib.tel,
+             latitude: lib.latitude?.toString(),
+             longitude: lib.longitude?.toString(),
+             homepage: lib.homepage,
+             hasBook: false,
+             loanAvailable: false,
+             closed: lib.closed,
+             operatingTime: lib.operatingTime,
+          }));
+          isFallback = true;
+      }
+
+      const checkLimit = isFallback ? 0 : 5; // Fallback 상태면 굳이 대출 가능 확인 안 함 (이미 없음)
       const librariesWithInfo = await Promise.all(
-        result.libraries.map(async (lib, idx) => {
+        targetLibraries.map(async (lib, idx) => {
           const lat = lib.latitude ? parseFloat(lib.latitude) : 0;
           const lng = lib.longitude ? parseFloat(lib.longitude) : 0;
           let distance: number | undefined;
@@ -92,7 +133,7 @@ export const useLibrarySearch = create<LibrarySearchState>((set, get) => ({
             latitude: lat,
             longitude: lng,
             homepage: lib.homepage,
-            hasBook: true,
+            hasBook: !isFallback, // Fallback이면 책 없음
             loanAvailable: false,
             distance,
           };
@@ -100,6 +141,7 @@ export const useLibrarySearch = create<LibrarySearchState>((set, get) => ({
       );
 
       const sortedLibraries = librariesWithInfo.sort((a, b) => {
+        if (a.hasBook !== b.hasBook) return a.hasBook ? -1 : 1; // 책 있는 곳 우선
         if (a.loanAvailable !== b.loanAvailable) return a.loanAvailable ? -1 : 1;
         if (a.distance !== undefined && b.distance !== undefined)
           return a.distance - b.distance;
@@ -112,7 +154,10 @@ export const useLibrarySearch = create<LibrarySearchState>((set, get) => ({
     }
   },
 
-  searchLibrariesNationwide: async (isbn: string) => {
+  searchLibrariesNationwide: async (
+    isbn: string,
+    userLocation?: { lat: number; lng: number } | null
+  ) => {
     const cacheKey = `nationwide_${isbn}`;
     const cached = globalCache.get(cacheKey);
 
@@ -141,23 +186,44 @@ export const useLibrarySearch = create<LibrarySearchState>((set, get) => ({
         .flatMap((r) => r.value.libraries);
 
       // 기본 정보 채우기 + 대출가능 여부 확인 대상 표시
-      let librariesWithInfo: LibraryWithBookInfo[] = allLibraries.map((lib: BookAvailability) => ({
-        libCode: lib.libraryCode,
-        libName: lib.libraryName,
-        address: lib.address || '',
-        tel: lib.tel || '',
-        latitude: lib.latitude ? parseFloat(lib.latitude) : 0,
-        longitude: lib.longitude ? parseFloat(lib.longitude) : 0,
-        homepage: lib.homepage,
-        hasBook: true,
-        loanAvailable: false, // 기본값 (미확인)
-        availabilityChecked: false, // 확인 여부 추적
-      }));
+      let librariesWithInfo: LibraryWithBookInfo[] = allLibraries.map((lib: BookAvailability) => {
+        const lat = lib.latitude ? parseFloat(lib.latitude) : 0;
+        const lng = lib.longitude ? parseFloat(lib.longitude) : 0;
+        let distance: number | undefined;
+
+        if (userLocation && lat && lng) {
+          distance = calculateDistance(userLocation.lat, userLocation.lng, lat, lng);
+        }
+
+        return {
+          libCode: lib.libraryCode,
+          libName: lib.libraryName,
+          address: lib.address || '',
+          tel: lib.tel || '',
+          latitude: lat,
+          longitude: lng,
+          homepage: lib.homepage,
+          hasBook: true,
+          loanAvailable: false, // 기본값 (미확인)
+          availabilityChecked: false, // 확인 여부 추적
+          distance,
+        };
+      });
+
+      // 🔍 [Fix] 거리순 1차 정렬 (내 주변 도서관을 우선적으로 확인하기 위함)
+      // 이걸 안 하면 regionCodes 순서(서울 '11' 등)대로 상위 30개를 자르게 되어,
+      // 지방 사용자는 서울 도서관만 확인하게 됨.
+      librariesWithInfo.sort((a, b) => {
+        if (a.distance !== undefined && b.distance !== undefined) {
+          return a.distance - b.distance;
+        }
+        return 0; // 거리 정보 없으면 순서 유지
+      });
 
       // ✅ 신뢰성 강화: 상위 30개 도서관 대출가능 여부 확인 (배치 처리로 Rate Limit 방지)
       const CHECK_LIMIT = 30;
-      const BATCH_SIZE = 10;
-      const BATCH_DELAY_MS = 200;
+      const BATCH_SIZE = 5; // 10 -> 5로 감소 (Server Load 감소)
+      const BATCH_DELAY_MS = 500; // 200ms -> 500ms로 증가 (여유롭게 요청)
 
       const librariesToCheck = librariesWithInfo.slice(0, CHECK_LIMIT);
       const batches: LibraryWithBookInfo[][] = [];
@@ -207,7 +273,10 @@ export const useLibrarySearch = create<LibrarySearchState>((set, get) => ({
         // 확인 여부 차선
         const aChecked = (a as any).availabilityChecked ?? false;
         const bChecked = (b as any).availabilityChecked ?? false;
-        if (aChecked !== bChecked) return aChecked ? -1 : 1;
+        // 거리 우선 (옵션)
+        if (a.distance !== undefined && b.distance !== undefined) {
+          return a.distance - b.distance;
+        }
         return 0;
       });
 

@@ -97,13 +97,18 @@ export function checkLibraryServices(libName: string) {
 
   // 2차: 휴리스틱 폴백 (신규 도서관 대응)
   // 대부분의 공공도서관은 책이음/책바다에 참여
+  
+  // '작은도서관'은 책바다/책이음 제외 가능성 높음
+  const isSmallLibrary = normalizedName.includes('작은도서관');
+
   const isPublic =
     normalizedName.includes('시립') ||
     normalizedName.includes('구립') ||
     normalizedName.includes('군립') ||
     normalizedName.includes('도립') ||
     normalizedName.includes('교육청') ||
-    normalizedName.includes('중앙도서관');
+    normalizedName.includes('중앙도서관') ||
+    (normalizedName.includes('도서관') && !isSmallLibrary); // 일반 'xx도서관'도 포함
 
   const isEducation = normalizedName.includes('교육청') || normalizedName.includes('교육도서관');
 
@@ -111,7 +116,7 @@ export function checkLibraryServices(libName: string) {
   const isUniversity = normalizedName.includes('대학교') || normalizedName.includes('대학');
 
   return {
-    isChaekbada: isPublic || isUniversity,
-    isChaekium: isPublic || isEducation,
+    isChaekbada: (isPublic || isUniversity) && !isSmallLibrary,
+    isChaekium: (isPublic || isEducation) || (!isSmallLibrary && normalizedName.includes('도서관')),
   };
 }
