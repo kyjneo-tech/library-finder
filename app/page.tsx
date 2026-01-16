@@ -40,6 +40,8 @@ import { HomeFavorites } from '@/features/home/ui/HomeFavorites';
 import { HomeSearchSection } from '@/features/home/ui/HomeSearchSection';
 import { HomeMapSection } from '@/features/home/ui/HomeMapSection';
 import { useRegionValidation } from '@/shared/lib/hooks/use-region-validation';
+import { usePendingActionStore } from '@/shared/lib/stores/use-pending-action-store';
+import { RegionRequiredModal } from '@/shared/ui/region-required-modal';
 import { ReadStampButton } from '@/features/reading-record/ui/read-stamp-button';
 
 export default function HomePage() {
@@ -92,6 +94,7 @@ export default function HomePage() {
   // Duplicate useLibrarySearch removed
   const { loadLibraries, setSelectedLibrary, selectedLibrary } = useMapStore();
   const { withRegionCheck } = useRegionValidation();
+  const { pendingAction, executePendingAction } = usePendingActionStore();
 
   // 🛡️ 사용자 위치 가져오기
   useEffect(() => {
@@ -318,7 +321,7 @@ export default function HomePage() {
     if (targetIsbn && regionCode) {
       await searchLibrariesWithBook(targetIsbn, regionCode, false, userLocation);
     }
-  });
+  }, 'book-select');  // 🔥 action type 추가
 
   // 🛡️ 대출 가능 여부 필터 상태 (책이음/책바다의 경우 기본값 true)
   const [onlyAvailable, setOnlyAvailable] = useState(false);
@@ -974,6 +977,17 @@ export default function HomePage() {
                     isOpen={showSmartFinder}
                     onClose={() => setShowSmartFinder(false)}
                     onSearch={handleSmartSearch}
+                  />
+
+                  {/* 📍 지역 선택 모달 */}
+                  <RegionRequiredModal 
+                    onRegionSelected={() => {
+                      // 지역 선택 후 pending action 실행
+                      const action = executePendingAction();
+                      if (action?.type === 'book-select' && action.payload) {
+                        handleBookSelect(action.payload);
+                      }
+                    }} 
                   />
 
 
