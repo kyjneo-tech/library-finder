@@ -33,7 +33,8 @@ interface BookSearchState {
   setBooks: (books: Book[]) => void;
 }
 
-const PAGE_SIZE = 20; // 🔥 한 번에 20개씩 로드 (API 호출 최적화)
+const PAGE_SIZE = 20; // 한 번에 20개씩 로드
+const MAX_PAGES = 5;  // 🛡️ 최대 5페이지 = 100권 (API 호출 제한)
 
 export const useBookSearch = create<BookSearchState>((set, get) => ({
   books: [],
@@ -141,8 +142,11 @@ export const useBookSearch = create<BookSearchState>((set, get) => ({
   loadMore: async () => {
     const { loadingMore, hasMore, currentPage, lastQuery, books, filters } = get();
     
-    // 로딩 중이거나 더 이상 데이터가 없으면 무시
-    if (loadingMore || !hasMore || !lastQuery) {
+    // 🛡️ 로딩 중, 데이터 없음, 또는 최대 페이지 도달 시 무시
+    if (loadingMore || !hasMore || !lastQuery || currentPage >= MAX_PAGES) {
+      if (currentPage >= MAX_PAGES) {
+        set({ hasMore: false }); // 더 이상 로드 불가 표시
+      }
       return;
     }
 

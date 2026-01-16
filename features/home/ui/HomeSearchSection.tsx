@@ -183,10 +183,19 @@ export function HomeSearchSection({
                   </div>
                 )}
 
-                {/* 🆕 모든 결과 표시 완료 */}
+                {/* 🆕 검색 결과 종료 안내 */}
                 {!hasMore && books.length > 0 && (
-                  <div className="text-center py-4 text-sm text-gray-400">
-                    모든 검색 결과를 표시했어요
+                  <div className="text-center py-4 space-y-1">
+                    <p className="text-sm text-gray-400">
+                      {books.length >= 100 
+                        ? '최대 100권까지 표시됩니다'
+                        : '모든 검색 결과를 표시했어요'}
+                    </p>
+                    {books.length >= 100 && (
+                      <p className="text-xs text-gray-400">
+                        더 많은 결과는 검색어를 구체화해주세요
+                      </p>
+                    )}
                   </div>
                 )}
               </motion.div>
