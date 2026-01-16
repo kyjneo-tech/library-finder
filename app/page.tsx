@@ -1011,7 +1011,9 @@ export default function HomePage() {
             </AnimatePresence>
           </>
         )}
-      {/* 📍 지역 선택 모달 (Global) */}
+      </main>
+
+      {/* 📍 지역 선택 모달 (Global) - Main 밖으로 이동하여 z-index 문제 해결 */}
       <RegionRequiredModal 
         onRegionSelected={() => {
           // 지역 선택 후 pending action 실행
@@ -1021,7 +1023,6 @@ export default function HomePage() {
           }
         }} 
       />
-      </main>
     </div>
   );
 }
