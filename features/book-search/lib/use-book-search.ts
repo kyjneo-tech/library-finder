@@ -33,8 +33,8 @@ interface BookSearchState {
   setBooks: (books: Book[]) => void;
 }
 
-const PAGE_SIZE = 20; // 한 번에 20개씩 로드
-const MAX_PAGES = 5;  // 🛡️ 최대 5페이지 = 100권 (API 호출 제한)
+const PAGE_SIZE = 50; // 한 번에 50개씩 로드 (균형 잡힌 값)
+const MAX_PAGES = 2;  // 🛡️ 최대 2페이지 = 100권 (API 호출 최대 2회)
 
 export const useBookSearch = create<BookSearchState>((set, get) => ({
   books: [],
