@@ -44,9 +44,30 @@ export const useBookSearch = create<BookSearchState>((set, get) => ({
     try {
       const result = await bookRepository.searchBooks(filters);
 
-      // ✅ Fallback: 결과 없으면 더 넓은 키워드로 재시도
+      // ✅ Fallback 1: 결과 없으면 띄어쓰기 제거 후 재검색
+      // 예: "클로드 코드" → "클로드코드"
       if (result.books.length === 0 && filters.query) {
-        // 키워드에서 첫 단어만 추출
+        const noSpaceQuery = filters.query.replace(/\s+/g, '');
+        
+        if (noSpaceQuery !== filters.query && noSpaceQuery.length > 1) {
+          const noSpaceResult = await bookRepository.searchBooks({
+            ...filters,
+            query: noSpaceQuery,
+          });
+
+          if (noSpaceResult.books.length > 0) {
+            set({
+              books: noSpaceResult.books,
+              totalCount: noSpaceResult.totalCount,
+              filters,
+              loading: false,
+              selectedBook: null,
+            });
+            return;
+          }
+        }
+
+        // ✅ Fallback 2: 첫 단어만 추출
         const firstWord = filters.query.split(' ')[0];
 
         if (firstWord !== filters.query && firstWord.length > 1) {
@@ -67,20 +88,14 @@ export const useBookSearch = create<BookSearchState>((set, get) => ({
           }
         }
 
-        // 최후의 fallback: "그림책"으로 검색
-        const genericResult = await bookRepository.searchBooks({
-          ...filters,
-          query: '그림책',
-        });
-
-        set({
-          books: genericResult.books,
-          totalCount: genericResult.totalCount,
-          filters,
-          loading: false,
-          selectedBook: null,
-        });
-        return;
+        // ✅ Fallback 3: 최후의 fallback (아동 모드에서만)
+        // "그림책"은 아동용이므로, 일반 검색에서는 빈 결과 유지
+        // 주석 처리 - 원하지 않는 결과 방지
+        // const genericResult = await bookRepository.searchBooks({
+        //   ...filters,
+        //   query: '그림책',
+        // });
+        // set({ books: genericResult.books, ... });
       }
 
       set({
