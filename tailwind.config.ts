@@ -12,9 +12,12 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      screens: {
+        xs: '475px',
+      },
       colors: {
-        background: 'hsl(var(--background))',
-        foreground: 'hsl(var(--foreground))',
+        background: 'var(--background)',
+        foreground: 'var(--foreground)',
         card: {
           DEFAULT: 'hsl(var(--card))',
           foreground: 'hsl(var(--card-foreground))',
@@ -78,6 +81,23 @@ const config: Config = {
           600: 'var(--color-growth-600)',
           700: 'var(--color-growth-700)',
         },
+        // Pop Art / Neo-Brutalism Colors (New)
+        pop: {
+            yellow: '#FFD700', // Sapiens Yellow
+            blue: '#4D6EF7',   // Cosmos Blue
+            red: '#FF4D4D',    // Harry Potter Red
+            green: '#4CAF50',  // Vegetarian Green
+            pink: '#FF9FF3',
+            purple: '#9B59B6',
+            sky: '#48DBFB',
+            dark: '#2d3436',
+        },
+      },
+      boxShadow: {
+        'pop': '4px 4px 0px 0px #000000',
+        'pop-hover': '6px 6px 0px 0px #000000',
+        'pop-sharp': '2px 2px 0px 0px #000000',
+        'inner-lg': 'inset 0 2px 4px 0 rgb(0 0 0 / 0.05)',
       },
       borderRadius: {
         lg: 'var(--radius-lg)',

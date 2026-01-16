@@ -52,8 +52,11 @@ model UserProfile {
   name      String?
   avatarUrl String?  @map("avatar_url")
   provider  String?  // 'kakao', 'google' etc
+  userType  String   @default("general") @map("user_type") // 'general' | 'parent'
+  hasCompletedOnboarding Boolean @default(false) @map("has_completed_onboarding")
   
   readStamps ReadStamp[]
+  childProfiles ChildProfile[]
   
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -82,8 +85,35 @@ model ReadStamp {
   
   user      UserProfile @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, isbn]) // 유저당 책 하나에 스탬프 하나
+  // 자녀에게 할당(큐레이션)된 경우 설정
+  childId   String?  @map("child_id")
+  child     ChildProfile? @relation(fields: [childId], references: [id])
+
+  // 유저당 책 하나에 스탬프 하나 (자녀별로도 구분 가능하되, 부모 서재엔 1개만)
+  // 부모 서재: childId=null, 자녀 서재: childId=uuid
+  // Nullable field in unique index is treated as distinct in Postgres, so (userId, isbn, childId) works.
+  @@unique([userId, isbn, childId]) 
   @@index([userId])
   @@index([isbn])
+  @@index([childId])
   @@map("read_stamps")
+}
+
+// 6. 자녀 프로필 (다자녀 지원)
+model ChildProfile {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id") 
+  name      String   
+  birthYear Int      @map("birth_year")
+  emoji     String?  @default("🐥")
+  
+  readStamps ReadStamp[]
+  
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  
+  user      UserProfile @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("child_profiles")
 }

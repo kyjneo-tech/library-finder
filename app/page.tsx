@@ -940,15 +940,12 @@ export default function HomePage() {
                      <KidsRecommendations onBookSelect={handleBookSelect} />
                   </div>
                   
-                  {/* 🔥 급상승 도서 (아동용 필터링) */}
-                  <HotTrendBooks onBookSelect={handleBookSelect} filterKids={true} />
-                  
                   <div className="mt-8">
                      <LocalPopularBooks onBookSelect={handleBookSelect} />
                   </div>
                   
-                  {/* ✨ 신착도서 (아동용 필터링) */}
-                  <NewArrivalsBooks onBookSelect={handleBookSelect} filterKids={true} />
+                  {/* 🔥 급상승 도서 (아동용 필터링) */}
+                  <HotTrendBooks onBookSelect={handleBookSelect} filterKids={true} />
 
                   {/* Subject Search (Moved Down) */}
                   <KidsCategories
@@ -1004,9 +1001,6 @@ export default function HomePage() {
                   <HotTrendBooks onBookSelect={handleBookSelect} filterKids={false} />
                   
                   <FamilyPopularBooks onBookSelect={handleBookSelect} onShowMore={handleShowMorePopular} />
-                  
-                  {/* ✨ 신착도서 (전체) */}
-                  <NewArrivalsBooks onBookSelect={handleBookSelect} filterKids={false} />
                 </motion.div>
               )}
             </AnimatePresence>

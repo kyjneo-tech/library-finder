@@ -1,4 +1,4 @@
-import { supabase } from '@/shared/lib/supabase';
+import { supabase } from '@/shared/lib/supabase/client';
 
 export const signInWithKakao = async () => {
   const { data, error } = await supabase.auth.signInWithOAuth({

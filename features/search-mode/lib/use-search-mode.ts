@@ -32,7 +32,7 @@ export const useSearchMode = create<SearchModeState>()(
           return {
             mode: 'kids',
             showKidsFeatures: true,
-            placeholder: '아이와 함께 읽을 책을 찾아보세요 🧸',
+            placeholder: '아이와 읽을 책, 무료로 빌려보세요 🧸',
             recommendations: 'kids',
           };
         }
@@ -40,7 +40,7 @@ export const useSearchMode = create<SearchModeState>()(
         return {
           mode: 'general',
           showKidsFeatures: false,
-          placeholder: '우리 가족 모두를 위한 책 검색 📚',
+          placeholder: '책 제목으로 무료 대출 도서관 찾기 📚',
           recommendations: 'popular',
         };
       },

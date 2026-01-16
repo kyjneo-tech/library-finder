@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { cookies } from 'next/headers';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { Prisma } from '@prisma/client';
+import { prisma } from '@/shared/lib/prisma'; // Use singleton
 
 export async function POST(request: NextRequest) {
   const cookieStore = await cookies(); // await for Next.js 15+ compatibility
@@ -54,62 +53,80 @@ export async function POST(request: NextRequest) {
     });
 
     // 2. Upsert local stamps
-    // This is a naive one-by-one upsert or transaction. Batching is better but Prisma createMany doesn't support upsert easily in all DBs (Postgres does with specific syntax, but Prisma standard 'upsert' is single).
-    // For now, let's use a transaction.
-    
     if (localStamps && localStamps.length > 0) {
-      await prisma.$transaction(
-        localStamps.map((stamp: any) => 
-          prisma.readStamp.upsert({
+      await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+        for (const stamp of localStamps) {
+          const targetChildId = stamp.childId || null;
+          
+          // 1. Try to find existing record
+          // We use findFirst instead of findUnique to handle potential multiple nulls safely (though we want unique)
+          // and to avoid the "null in unique input" error.
+          const existing = await tx.readStamp.findFirst({
             where: {
-              userId_isbn: {
-                userId: user.id,
-                isbn: stamp.isbn,
-              }
-            },
-            update: {
-              // Only update if local is newer? For now, we trust local on first sync or just overwrite.
-              // Let's assume overwrite or merge emoji if null.
-              emoji: stamp.emoji,
-              title: stamp.title,
-              bookImage: stamp.bookImageUrl,
-              author: stamp.author,
-              updatedAt: new Date(),
-            },
-            create: {
               userId: user.id,
               isbn: stamp.isbn,
-              title: stamp.title,
-              author: stamp.author,
-              bookImage: stamp.bookImageUrl,
-              emoji: stamp.emoji,
-              createdAt: stamp.createdAt ? new Date(stamp.createdAt) : new Date(),
+              childId: targetChildId,
             }
-          })
-        )
-      );
+          });
+
+          if (existing) {
+            // 2. Update
+            await tx.readStamp.update({
+              where: { id: existing.id },
+              data: {
+                emoji: stamp.emoji,
+                title: stamp.title,
+                bookImage: stamp.bookImageUrl,
+                author: stamp.author,
+                updatedAt: new Date(),
+              }
+            });
+          } else {
+            // 3. Create
+            await tx.readStamp.create({
+              data: {
+                userId: user.id,
+                isbn: stamp.isbn,
+                title: stamp.title,
+                author: stamp.author || "작가 미상",
+                bookImage: stamp.bookImageUrl,
+                emoji: stamp.emoji,
+                childId: targetChildId,
+                createdAt: stamp.createdAt ? new Date(stamp.createdAt) : new Date(),
+              }
+            });
+          }
+        }
+      }, {
+        maxWait: 5000,
+        timeout: 20000,
+      });
     }
 
-    // 3. Fetch all stamps from server to return to client (Sync back)
+    // 3. Fetch all stamps from server to return to client
     const serverStamps = await prisma.readStamp.findMany({
       where: { userId: user.id },
       orderBy: { createdAt: 'desc' }
     });
 
     // Transform to client shape
-    const stamps = serverStamps.map((s: { isbn: string; title: string; author: string | null; bookImage: string | null; emoji: string | null; createdAt: Date }) => ({
+    const stamps = serverStamps.map((s: any) => ({
       isbn: s.isbn,
       title: s.title,
       author: s.author || undefined,
       bookImageUrl: s.bookImage || undefined,
       emoji: s.emoji || undefined,
+      childId: s.childId || undefined,
       createdAt: s.createdAt.toISOString(),
     }));
 
     return NextResponse.json({ stamps });
 
-  } catch (e) {
+  } catch (e: any) {
     console.error('Sync failed:', e);
-    return NextResponse.json({ error: 'Sync failed' }, { status: 500 });
+    return NextResponse.json({ 
+      error: 'Sync failed', 
+      details: e?.message || String(e) 
+    }, { status: 500 });
   }
 }

@@ -15,8 +15,11 @@ import { useLibrarySearch } from '@/features/library/lib/use-library-search';
 import { useBookSearch } from '@/features/book-search/lib/use-book-search';
 import { useAuthStore } from '@/features/auth/lib/use-auth-store';
 import { useReadingRecord } from '@/features/reading-record/lib/use-reading-record';
+import { useAgeFilter } from '@/features/kids-mode/lib/use-age-filter';
 import { LoginButton } from '@/features/auth/ui/login-button';
 import { UserMenu } from '@/features/auth/ui/user-menu';
+import Link from 'next/link';
+import { Logo } from '@/shared/ui/logo';
 
 interface HomeHeaderProps {
   searchQuery: string;
@@ -92,6 +95,8 @@ export function HomeHeader({
           animate={{ opacity: 1 }}
           transition={{ delay: 0.2 }}
         >
+
+
           <motion.button
             onClick={handleReset}
             className="flex items-center gap-2 group"
@@ -99,18 +104,10 @@ export function HomeHeader({
             whileTap={{ scale: 0.98 }}
           >
             <motion.div
-              className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-purple rounded-2xl flex items-center justify-center shadow-glow-purple relative overflow-hidden"
-              animate={{
-                boxShadow: [
-                  '0 8px 32px rgba(168, 85, 247, 0.25)',
-                  '0 8px 32px rgba(168, 85, 247, 0.4)',
-                  '0 8px 32px rgba(168, 85, 247, 0.25)',
-                ],
-              }}
-              transition={{ duration: 2, repeat: Infinity }}
+              className="relative w-12 h-12 sm:w-16 sm:h-16 rounded-xl overflow-hidden shadow-md bg-white p-1.5"
+              whileHover={{ rotate: 5 }}
             >
-              <LibraryIcon className="w-6 h-6 sm:w-7 sm:h-7 text-white relative z-10" />
-              <div className="absolute inset-0 bg-white/20 blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
+              <Logo className="w-full h-full" />
             </motion.div>
             <div>
               <h1 className="text-lg sm:text-xl font-extrabold bg-gradient-to-r from-wisdom-600 to-warmth-600 bg-clip-text text-transparent tracking-tight whitespace-nowrap">
@@ -124,7 +121,19 @@ export function HomeHeader({
 
           <div className="flex items-center gap-2">
             {/* 로그인 / 유저 메뉴 */}
-            {user ? <UserMenu /> : <LoginButton />}
+            {user ? (
+              <div className="flex items-center gap-2">
+                <Link href="/my-bookshelf">
+                  <Button variant="ghost" className="hidden sm:flex items-center gap-2 text-gray-600 font-medium hover:bg-purple-50 hover:text-purple-600">
+                    <LibraryIcon className="w-4 h-4" />
+                    <span>내 서재</span>
+                  </Button>
+                </Link>
+                <UserMenu />
+              </div>
+            ) : (
+              <LoginButton />
+            )}
           </div>
         </motion.div>
         
@@ -177,6 +186,21 @@ export function HomeHeader({
             </motion.button>
           </div>
         
+        {/* 3초 설득 헤드라인 */}
+        <motion.div
+          className="text-center space-y-1 py-1"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.25 }}
+        >
+          <h2 className="text-lg sm:text-2xl font-black text-gray-900 leading-tight">
+            아직도 책 사서 보세요?
+          </h2>
+          <p className="text-[11px] sm:text-sm font-medium text-gray-500">
+            전국 2,800개 도서관의 신간/베스트셀러 재고를 <span className="text-purple-600 font-bold">0원</span>에 찾아드립니다.
+          </p>
+        </motion.div>
+
         <motion.div
           className="bg-white/50 rounded-2xl p-1"
           initial={{ opacity: 0, y: 10 }}

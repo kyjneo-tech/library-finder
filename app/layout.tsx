@@ -6,6 +6,8 @@ import { Footer } from '@/shared/ui/footer';
 import { GlobalLoadingOverlay } from '@/shared/ui/global-loading-overlay';
 import { ContactSupport } from '@/features/contact/ui/contact-support';
 import { Noto_Sans_KR } from 'next/font/google';
+import { OnboardingModal } from '@/features/onboarding/ui/onboarding-modal';
+import { UserModeSyncer } from '@/features/user/ui/user-mode-syncer';
 
 const notoSansKR = Noto_Sans_KR({
   weight: ['400', '500', '700', '900'],
@@ -29,7 +31,7 @@ export const metadata: Metadata = {
     default: '우리도서관 | 내 손안의 공공도서관',
   },
   description:
-    '내 주변 도서관 대출 현황 실시간 확인! 영유아부터 성인까지 온 가족을 위한 맞춤형 도서 추천 서비스를 제공합니다.',
+    '아직도 책 사서 보세요? 전국 2,800개 도서관의 신간/베스트셀러 재고를 0원에 찾아드립니다. 대출 가능 여부까지 3초 만에 확인하세요.',
   keywords: [
     '우리도서관',
     '도서관',
@@ -57,7 +59,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: '우리도서관',
     description:
-      '내 손안의 공공도서관, 우리도서관! 책육아부터 전문서적까지 전국 도서관을 통합 검색하세요.',
+      '아직도 책 사서 보세요? 전국 2,800개 도서관의 신간/베스트셀러 재고를 0원에 찾아드립니다.',
     url: 'https://woorilib.com',
     siteName: '우리도서관',
     locale: 'ko_KR',
@@ -67,7 +69,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: '우리도서관',
     description:
-      '내 손안의 공공도서관, 우리도서관! 책육아부터 전문서적까지 전국 도서관을 통합 검색하세요.',
+      '아직도 책 사서 보세요? 전국 2,800개 도서관의 신간/베스트셀러 재고를 0원에 찾아드립니다.',
   },
   verification: {
     google: 'lgrYKoxQ9rWQHtQEBWV37D8ccvFxt_3fxXJiHcqme7w',
@@ -84,6 +86,10 @@ export const metadata: Metadata = {
     statusBarStyle: 'default',
     title: '우리도서관',
   },
+  icons: {
+    icon: '/logo.svg',
+    apple: '/logo.svg',
+  },
 };
 
 export default function RootLayout({
@@ -97,6 +103,8 @@ export default function RootLayout({
         className="antialiased min-h-screen flex flex-col bg-white text-gray-900"
         style={{ fontFamily: 'var(--font-noto-sans), -apple-system, sans-serif' }}
       >
+        <UserModeSyncer />
+        <OnboardingModal />
         <div className="flex-1 w-full">{children}</div>
         <Footer />
         <ContactSupport />
