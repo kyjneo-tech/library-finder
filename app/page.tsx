@@ -979,16 +979,7 @@ export default function HomePage() {
                     onSearch={handleSmartSearch}
                   />
 
-                  {/* 📍 지역 선택 모달 */}
-                  <RegionRequiredModal 
-                    onRegionSelected={() => {
-                      // 지역 선택 후 pending action 실행
-                      const action = executePendingAction();
-                      if (action?.type === 'book-select' && action.payload) {
-                        handleBookSelect(action.payload);
-                      }
-                    }} 
-                  />
+
 
 
 
@@ -1020,6 +1011,16 @@ export default function HomePage() {
             </AnimatePresence>
           </>
         )}
+      {/* 📍 지역 선택 모달 (Global) */}
+      <RegionRequiredModal 
+        onRegionSelected={() => {
+          // 지역 선택 후 pending action 실행
+          const action = executePendingAction();
+          if (action?.type === 'book-select' && action.payload) {
+            handleBookSelect(action.payload);
+          }
+        }} 
+      />
       </main>
     </div>
   );
