@@ -18,7 +18,7 @@ export class BookRepositoryImpl implements BookRepository {
     try {
       const query = filters.query || '';
       const pageNo = filters.pageNo || 1;
-      const pageSize = filters.pageSize || 10;
+      const pageSize = filters.pageSize || 50;  // 🔥 기본값 50으로 증가 (더 많은 결과)
 
       let sortParam = filters.sort;
       if (sortParam === 'loan') sortParam = undefined;

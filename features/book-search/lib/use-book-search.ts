@@ -33,7 +33,7 @@ export const useBookSearch = create<BookSearchState>((set, get) => ({
   error: null,
   filters: {
     pageNo: 1,
-    pageSize: 20,
+    pageSize: 50,  // 🔥 기본값 50으로 증가
   },
   selectedBook: null,
 
@@ -129,7 +129,7 @@ export const useBookSearch = create<BookSearchState>((set, get) => ({
     set({
       books: [],
       totalCount: 0,
-      filters: { pageNo: 1, pageSize: 20 },
+      filters: { pageNo: 1, pageSize: 50 },
       error: null,
       selectedBook: null,
     });
@@ -184,7 +184,7 @@ export const useBookSearch = create<BookSearchState>((set, get) => ({
         age: '0;6', // 초등 저학년(8) 제거하여 학습만화 노출 최소화 (유아 집중)
         addCode: '7',
         kdc: kdc,
-        pageSize: 20,
+        pageSize: 50,
         region,
         libCode,
       });
@@ -198,7 +198,7 @@ export const useBookSearch = create<BookSearchState>((set, get) => ({
         set({
           books: filteredBooks,
           totalCount: filteredBooks.length,
-          filters: { pageNo: 1, pageSize: 20 }, // 필터 초기화
+          filters: { pageNo: 1, pageSize: 50 }, // 필터 초기화
           loading: false,
           selectedBook: null,
         });
