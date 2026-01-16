@@ -1,8 +1,8 @@
 'use client';
 
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { XCircle, CheckCircle2, ChevronRight, BookOpen, Search as SearchIcon } from 'lucide-react';
+import { XCircle, ChevronRight, BookOpen, Search as SearchIcon, Loader2 } from 'lucide-react';
 import Image from 'next/image';
 import { Book } from '@/entities/book/model/types';
 import { useBookSearch } from '@/features/book-search/lib/use-book-search';
@@ -11,9 +11,8 @@ import { cn } from '@/shared/lib/cn';
 import { staggerContainer, staggerItem } from '@/shared/lib/animations/variants';
 import { sanitizeHTML } from '@/shared/lib/utils/sanitize';
 
-import { Card, CardContent } from '@/shared/ui/card';
+import { Card } from '@/shared/ui/card';
 import { Badge } from '@/shared/ui/badge';
-import { Skeleton } from '@/shared/ui/skeleton';
 
 const MotionCard = motion(Card);
 
@@ -35,7 +34,8 @@ export function HomeSearchSection({
   totalCount,
 }: HomeSearchSectionProps) {
   const searchResultsRef = useRef<HTMLDivElement>(null);
-  const { loading, error } = useBookSearch();
+  const loadMoreRef = useRef<HTMLDivElement>(null);
+  const { loading, loadingMore, hasMore, loadMore, error } = useBookSearch();
   const { mode } = useSearchMode();
 
   // Scroll to top when showing results
@@ -44,6 +44,31 @@ export function HomeSearchSection({
       searchResultsRef.current.scrollTop = 0;
     }
   }, [showSearchResults]);
+
+  // 🆕 Intersection Observer for infinite scroll
+  useEffect(() => {
+    if (!showSearchResults || !hasMore || loadingMore) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore && !loadingMore) {
+          loadMore();
+        }
+      },
+      { threshold: 0.1, rootMargin: '100px' }
+    );
+
+    const currentRef = loadMoreRef.current;
+    if (currentRef) {
+      observer.observe(currentRef);
+    }
+
+    return () => {
+      if (currentRef) {
+        observer.unobserve(currentRef);
+      }
+    };
+  }, [showSearchResults, hasMore, loadingMore, loadMore]);
 
   return (
     <AnimatePresence>
@@ -61,7 +86,7 @@ export function HomeSearchSection({
                 '{searchQuery}' <span className="text-purple-500">검색 결과</span>
               </h2>
               <p className="text-xs font-bold text-gray-500">
-                총 {totalCount.toLocaleString()}권의 책을 찾았어요
+                총 {totalCount.toLocaleString()}권 중 {books.length}권 표시
               </p>
             </div>
             <button
@@ -99,9 +124,9 @@ export function HomeSearchSection({
                 initial="initial"
                 animate="animate"
               >
-                {books.map((book) => (
+                {books.map((book, index) => (
                   <MotionCard
-                    key={book.isbn13}
+                    key={`${book.isbn13 || book.isbn}-${index}`}
                     variants={staggerItem}
                     onClick={() => handleBookSelect(book)}
                     className="flex rounded-2xl p-4 shadow-sm border-gray-100 hover:border-purple-200 transition-all cursor-pointer group active:scale-98 relative overflow-hidden"
@@ -135,10 +160,35 @@ export function HomeSearchSection({
                           <span dangerouslySetInnerHTML={{ __html: sanitizeHTML(book.author || '') }} /> · {book.publisher}
                         </p>
                       </div>
-
                     </div>
                   </MotionCard>
                 ))}
+
+                {/* 🆕 무한스크롤 로딩 인디케이터 */}
+                {hasMore && (
+                  <div ref={loadMoreRef} className="flex justify-center py-6">
+                    {loadingMore ? (
+                      <div className="flex items-center gap-2 text-purple-500">
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                        <span className="text-sm font-medium">더 불러오는 중...</span>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={loadMore}
+                        className="px-6 py-2 bg-purple-100 text-purple-600 rounded-xl text-sm font-bold hover:bg-purple-200 transition-colors"
+                      >
+                        더 보기
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {/* 🆕 모든 결과 표시 완료 */}
+                {!hasMore && books.length > 0 && (
+                  <div className="text-center py-4 text-sm text-gray-400">
+                    모든 검색 결과를 표시했어요
+                  </div>
+                )}
               </motion.div>
             ) : (
               <div className="flex flex-col items-center justify-center h-full space-y-4 text-center">

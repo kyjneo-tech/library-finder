@@ -11,14 +11,21 @@ interface BookSearchState {
   books: Book[];
   totalCount: number;
   loading: boolean;
+  loadingMore: boolean;  // 🆕 추가 로딩 상태
   error: string | null;
   filters: BookSearchFilters;
+  
+  // 🆕 무한스크롤 지원
+  hasMore: boolean;
+  currentPage: number;
+  lastQuery: string;
 
   // 선택된 책 (도서관 검색용)
   selectedBook: Book | null;
 
   // Actions
   searchBooks: (filters: BookSearchFilters) => Promise<void>;
+  loadMore: () => Promise<void>;  // 🆕 추가
   setFilters: (filters: Partial<BookSearchFilters>) => void;
   clearSearch: () => void;
   selectBook: (book: Book | null) => Promise<void>;
@@ -26,32 +33,52 @@ interface BookSearchState {
   setBooks: (books: Book[]) => void;
 }
 
+const PAGE_SIZE = 20; // 🔥 한 번에 20개씩 로드 (API 호출 최적화)
+
 export const useBookSearch = create<BookSearchState>((set, get) => ({
   books: [],
   totalCount: 0,
   loading: false,
+  loadingMore: false,
   error: null,
   filters: {
     pageNo: 1,
-    pageSize: 50,  // 🔥 기본값 50으로 증가
+    pageSize: PAGE_SIZE,
   },
+  hasMore: false,
+  currentPage: 1,
+  lastQuery: '',
   selectedBook: null,
 
   searchBooks: async (filters: BookSearchFilters) => {
-    // ... searchBooks logic ...
-    set({ loading: true, error: null });
+    const query = filters.query || '';
+    
+    // 🛡️ 중복 검색 방지: 같은 쿼리로 연속 검색 시 무시
+    const { lastQuery, loading } = get();
+    if (loading || (query === lastQuery && get().books.length > 0)) {
+      return;
+    }
+
+    set({ 
+      loading: true, 
+      error: null, 
+      books: [],  // 새 검색 시 초기화
+      currentPage: 1,
+      lastQuery: query,
+    });
     useLoadingStore.getState().startLoading(LOADING_KEYS.SEARCH_BOOKS);
+    
     try {
-      const result = await bookRepository.searchBooks(filters);
+      const searchFilters = { ...filters, pageNo: 1, pageSize: PAGE_SIZE };
+      const result = await bookRepository.searchBooks(searchFilters);
 
       // ✅ Fallback 1: 결과 없으면 띄어쓰기 제거 후 재검색
-      // 예: "클로드 코드" → "클로드코드"
-      if (result.books.length === 0 && filters.query) {
-        const noSpaceQuery = filters.query.replace(/\s+/g, '');
+      if (result.books.length === 0 && query) {
+        const noSpaceQuery = query.replace(/\s+/g, '');
         
-        if (noSpaceQuery !== filters.query && noSpaceQuery.length > 1) {
+        if (noSpaceQuery !== query && noSpaceQuery.length > 1) {
           const noSpaceResult = await bookRepository.searchBooks({
-            ...filters,
+            ...searchFilters,
             query: noSpaceQuery,
           });
 
@@ -59,7 +86,8 @@ export const useBookSearch = create<BookSearchState>((set, get) => ({
             set({
               books: noSpaceResult.books,
               totalCount: noSpaceResult.totalCount,
-              filters,
+              hasMore: noSpaceResult.books.length < noSpaceResult.totalCount,
+              filters: searchFilters,
               loading: false,
               selectedBook: null,
             });
@@ -68,11 +96,11 @@ export const useBookSearch = create<BookSearchState>((set, get) => ({
         }
 
         // ✅ Fallback 2: 첫 단어만 추출
-        const firstWord = filters.query.split(' ')[0];
+        const firstWord = query.split(' ')[0];
 
-        if (firstWord !== filters.query && firstWord.length > 1) {
+        if (firstWord !== query && firstWord.length > 1) {
           const fallbackResult = await bookRepository.searchBooks({
-            ...filters,
+            ...searchFilters,
             query: firstWord,
           });
 
@@ -80,44 +108,77 @@ export const useBookSearch = create<BookSearchState>((set, get) => ({
             set({
               books: fallbackResult.books,
               totalCount: fallbackResult.totalCount,
-              filters,
+              hasMore: fallbackResult.books.length < fallbackResult.totalCount,
+              filters: searchFilters,
               loading: false,
               selectedBook: null,
             });
             return;
           }
         }
-
-        // ✅ Fallback 3: 최후의 fallback (아동 모드에서만)
-        // "그림책"은 아동용이므로, 일반 검색에서는 빈 결과 유지
-        // 주석 처리 - 원하지 않는 결과 방지
-        // const genericResult = await bookRepository.searchBooks({
-        //   ...filters,
-        //   query: '그림책',
-        // });
-        // set({ books: genericResult.books, ... });
       }
 
       set({
         books: result.books,
         totalCount: result.totalCount,
-        filters,
+        hasMore: result.books.length < result.totalCount,
+        filters: searchFilters,
         loading: false,
-        // 새 검색 시 이전 선택된 책 초기화
         selectedBook: null,
       });
     } catch (error) {
       set({
         error: error instanceof Error ? error.message : '검색 중 오류가 발생했습니다',
         loading: false,
+        hasMore: false,
       });
     } finally {
       useLoadingStore.getState().stopLoading(LOADING_KEYS.SEARCH_BOOKS);
     }
   },
 
+  // 🆕 무한스크롤: 다음 페이지 로드
+  loadMore: async () => {
+    const { loadingMore, hasMore, currentPage, lastQuery, books, filters } = get();
+    
+    // 로딩 중이거나 더 이상 데이터가 없으면 무시
+    if (loadingMore || !hasMore || !lastQuery) {
+      return;
+    }
+
+    set({ loadingMore: true });
+    
+    try {
+      const nextPage = currentPage + 1;
+      const result = await bookRepository.searchBooks({
+        ...filters,
+        query: lastQuery,
+        pageNo: nextPage,
+        pageSize: PAGE_SIZE,
+      });
+
+      // 중복 제거: ISBN 기준
+      const existingIsbns = new Set(books.map(b => b.isbn13 || b.isbn));
+      const newBooks = result.books.filter(b => {
+        const isbn = b.isbn13 || b.isbn;
+        return isbn && !existingIsbns.has(isbn);
+      });
+
+      const allBooks = [...books, ...newBooks];
+      
+      set({
+        books: allBooks,
+        currentPage: nextPage,
+        hasMore: allBooks.length < result.totalCount && newBooks.length > 0,
+        loadingMore: false,
+      });
+    } catch (error) {
+      set({ loadingMore: false });
+      console.error('Load more error:', error);
+    }
+  },
+
   setFilters: (newFilters: Partial<BookSearchFilters>) => {
-    // ...
     const currentFilters = get().filters;
     const updatedFilters = { ...currentFilters, ...newFilters };
     set({ filters: updatedFilters });
@@ -125,34 +186,30 @@ export const useBookSearch = create<BookSearchState>((set, get) => ({
   },
 
   clearSearch: () => {
-    // ...
     set({
       books: [],
       totalCount: 0,
-      filters: { pageNo: 1, pageSize: 50 },
+      filters: { pageNo: 1, pageSize: PAGE_SIZE },
       error: null,
       selectedBook: null,
+      hasMore: false,
+      currentPage: 1,
+      lastQuery: '',
     });
   },
 
   selectBook: async (book: Book | null) => {
-    // ...
     set({ selectedBook: book });
     
     if (!book) return;
 
     // 설명이 없으면 상세 정보 API 호출하여 보강
     if (!book.description && book.isbn13) {
-      // console.log(`[useBookSearch] Fetching details for ${book.title}...`);
       try {
-        // 상세 정보(srchDtlList) 조회
         const detailedBook = await bookRepository.getBookDetail(book.isbn13);
-
         if (detailedBook) {
-          // console.log('[useBookSearch] Details fetched successfully');
           set((state) => {
             const currentBook = state.selectedBook;
-            // 선택된 책이 바뀌지 않았을 때만 업데이트
             if (currentBook && currentBook.isbn13 === book.isbn13) {
               return {
                 selectedBook: {
@@ -168,20 +225,17 @@ export const useBookSearch = create<BookSearchState>((set, get) => ({
           });
         }
       } catch {
-        // console.error('[useBookSearch] Failed to fetch book details:', error);
+        // Silent fail
       }
     }
   },
 
   searchByKdc: async (kdc: string, keyword: string, region?: string, libCode?: string) => {
-    set({ loading: true, error: null });
+    set({ loading: true, error: null, lastQuery: keyword });
     useLoadingStore.getState().startLoading(LOADING_KEYS.LOAD_RECOMMENDATIONS, '추천 도서 분석 중...');
     try {
-      // console.log(`[useBookSearch] Searching by KDC: ${kdc} (Keyword: ${keyword})`);
-
-      // 1. KDC 기반 인기 도서 조회 (대출 가능한 책 우선)
       const popularBooks = await bookRepository.getPopularBooks({
-        age: '0;6', // 초등 저학년(8) 제거하여 학습만화 노출 최소화 (유아 집중)
+        age: '0;6',
         addCode: '7',
         kdc: kdc,
         pageSize: 50,
@@ -189,26 +243,23 @@ export const useBookSearch = create<BookSearchState>((set, get) => ({
         libCode,
       });
       
-      // 🚨 [Enhanced Filtering] 학습만화 및 초등 인기 시리즈 강제 제외 로직
-      // API에서 age=6으로 해도 "전체 이용가"인 만화책이 섞여 나오는 문제 해결
       const filteredBooks = popularBooks.filter((book) => !isExcludedBook(book.title));
 
       if (filteredBooks.length > 0) {
-        // console.log(`[useBookSearch] Found ${filteredBooks.length} books via KDC (Filtered).`);
         set({
           books: filteredBooks,
           totalCount: filteredBooks.length,
-          filters: { pageNo: 1, pageSize: 50 }, // 필터 초기화
+          hasMore: false,  // KDC 검색은 페이지네이션 없음
+          filters: { pageNo: 1, pageSize: 50 },
           loading: false,
           selectedBook: null,
         });
         return;
       }
 
-      // 2. 결과 없으면 네이버 검색으로 Fallback
+      // 결과 없으면 일반 검색으로 Fallback
       await get().searchBooks({ query: keyword });
     } catch (error) {
-      // console.error('KDC 검색 오류:', error);
       set({
         error: error instanceof Error ? error.message : '주제별 검색 실패',
         loading: false,
@@ -224,6 +275,7 @@ export const useBookSearch = create<BookSearchState>((set, get) => ({
       totalCount: books.length,
       loading: false,
       selectedBook: null,
+      hasMore: false,
     });
   },
 }));
