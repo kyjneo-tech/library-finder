@@ -56,14 +56,12 @@ export const useLibrarySearch = create<LibrarySearchState>((set, get) => ({
         isWideSearch && region.length === 5 ? region.substring(0, 2) : region;
       const result = await bookRepository.getLibrariesWithBook(isbn, searchRegion);
 
-      // 🚨 [Fallback] 해당 지역에 소장 도서관이 없을 때, 그 지역의 도서관 목록 표시 (대출 불가 상태로)
+      // 🚨 [Fallback] 해당 지역에 소장 도서관이 없을 때
       let targetLibraries = result.libraries;
       let isFallback = false;
 
       if (targetLibraries.length === 0 && !isWideSearch) {
-          // console.log(`[useLibrarySearch] No libraries found in region ${region}. Fetching all libraries for context.`);
           const { libraryRepository } = await import('@/entities/library/repository/library.repository.impl');
-          
           const filters: any = {};
           if (region.length === 5) {
              filters.dtl_region = region;
@@ -73,9 +71,8 @@ export const useLibrarySearch = create<LibrarySearchState>((set, get) => ({
           }
           
           const fallbackResult = await libraryRepository.getLibraries(filters);
-          // Convert Library[] to BookAvailability[] (mock)
           targetLibraries = fallbackResult.libraries.map(lib => ({
-             isbn: isbn, // ✅ Fix: Add missing isbn
+             isbn: isbn,
              libraryCode: lib.libCode,
              libraryName: lib.libName,
              address: lib.address,
@@ -91,58 +88,91 @@ export const useLibrarySearch = create<LibrarySearchState>((set, get) => ({
           isFallback = true;
       }
 
-      const checkLimit = isFallback ? 0 : 5; // Fallback 상태면 굳이 대출 가능 확인 안 함 (이미 없음)
-      const librariesWithInfo = await Promise.all(
-        targetLibraries.map(async (lib, idx) => {
-          const lat = lib.latitude ? parseFloat(lib.latitude) : 0;
-          const lng = lib.longitude ? parseFloat(lib.longitude) : 0;
-          let distance: number | undefined;
+      // 1. 거리 계산 및 기본 매핑
+      let librariesWithInfo = targetLibraries.map((lib) => {
+        const lat = lib.latitude ? parseFloat(lib.latitude) : 0;
+        const lng = lib.longitude ? parseFloat(lib.longitude) : 0;
+        let distance: number | undefined;
 
-          if (userLocation && lat && lng) {
-            distance = calculateDistance(userLocation.lat, userLocation.lng, lat, lng);
-          }
+        if (userLocation && lat && lng) {
+          distance = calculateDistance(userLocation.lat, userLocation.lng, lat, lng);
+        }
 
-          if (idx < checkLimit) {
-            try {
-              const availability = await bookRepository.getBookAvailability(
-                isbn,
-                lib.libraryCode
-              );
-              const info = availability[0];
-              return {
-                libCode: lib.libraryCode,
-                libName: lib.libraryName,
-                address: lib.address || '',
-                tel: lib.tel || '',
-                latitude: lat,
-                longitude: lng,
-                homepage: lib.homepage,
-                hasBook: info?.hasBook ?? true,
-                loanAvailable: info?.loanAvailable ?? false,
-                distance,
-              };
-            } catch {
-              // Ignore error
+        return {
+          libCode: lib.libraryCode,
+          libName: lib.libraryName,
+          address: lib.address || '',
+          tel: lib.tel || '',
+          latitude: lat,
+          longitude: lng,
+          homepage: lib.homepage,
+          hasBook: !isFallback && (lib.hasBook ?? true),
+          loanAvailable: false, // 기본값
+          availabilityChecked: false,
+          distance,
+        };
+      });
+
+      // 2. 거리순 정렬 (내 주변 우선 확인)
+      librariesWithInfo.sort((a, b) => {
+        if (a.distance !== undefined && b.distance !== undefined) {
+          return a.distance - b.distance;
+        }
+        return 0;
+      });
+
+      // 3. 상위 30개 대출 가능 여부 확인 (Fallback 아닐 때만)
+      if (!isFallback) {
+        const CHECK_LIMIT = 30;
+        const BATCH_SIZE = 5;
+        const BATCH_DELAY_MS = 500;
+
+        const librariesToCheck = librariesWithInfo.slice(0, CHECK_LIMIT);
+        const batches = [];
+        
+        for (let i = 0; i < librariesToCheck.length; i += BATCH_SIZE) {
+          batches.push(librariesToCheck.slice(i, i + BATCH_SIZE));
+        }
+
+        let checkedIndex = 0;
+        for (const batch of batches) {
+          const batchResults = await Promise.allSettled(
+            batch.map((lib) => bookRepository.getBookAvailability(isbn, lib.libCode))
+          );
+
+          batchResults.forEach((res, batchIdx) => {
+            const globalIdx = checkedIndex + batchIdx;
+            if (globalIdx < librariesWithInfo.length) {
+              if (res.status === 'fulfilled' && res.value[0]) {
+                librariesWithInfo[globalIdx] = {
+                  ...librariesWithInfo[globalIdx],
+                  loanAvailable: res.value[0].loanAvailable ?? false,
+                  availabilityChecked: true,
+                };
+              } else {
+                 librariesWithInfo[globalIdx] = {
+                  ...librariesWithInfo[globalIdx],
+                  availabilityChecked: true,
+                };
+              }
             }
-          }
-          return {
-            libCode: lib.libraryCode,
-            libName: lib.libraryName,
-            address: lib.address || '',
-            tel: lib.tel || '',
-            latitude: lat,
-            longitude: lng,
-            homepage: lib.homepage,
-            hasBook: !isFallback, // Fallback이면 책 없음
-            loanAvailable: false,
-            distance,
-          };
-        })
-      );
+          });
 
+          checkedIndex += batch.length;
+          if (batches.indexOf(batch) < batches.length - 1) {
+            await new Promise((resolve) => setTimeout(resolve, BATCH_DELAY_MS));
+          }
+        }
+      }
+
+      // 4. 최종 정렬: 대출가능 -> 확인됨 -> 거리
       const sortedLibraries = librariesWithInfo.sort((a, b) => {
-        if (a.hasBook !== b.hasBook) return a.hasBook ? -1 : 1; // 책 있는 곳 우선
+        if (a.hasBook !== b.hasBook) return a.hasBook ? -1 : 1;
         if (a.loanAvailable !== b.loanAvailable) return a.loanAvailable ? -1 : 1;
+        
+        // (Optional) 확인된 것을 우선? -> 아님, 거리가 더 중요할 수 있음.
+        // 하지만 대출가능한게 제일 위로 와야 함.
+        
         if (a.distance !== undefined && b.distance !== undefined)
           return a.distance - b.distance;
         return 0;

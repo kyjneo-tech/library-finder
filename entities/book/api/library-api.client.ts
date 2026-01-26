@@ -1,5 +1,17 @@
 import { API_CONFIG } from '@/shared/config/constants';
 
+export interface Library {
+  libCode: string;
+  libName: string;
+  address: string;
+  tel: string;
+  homepage: string;
+  latitude: string;
+  longitude: string;
+  closed: string;
+  operatingTime: string;
+}
+
 export class LibraryApiClient {
   private baseUrl: string;
 
@@ -28,14 +40,12 @@ export class LibraryApiClient {
       return this.pendingRequests.get(cacheKey) as Promise<T>;
     }
 
-    // 2. Check cache (only for GET-like requests, which all of these effectively are)
+    // 2. Check cache
     const cached = this.cache.get(cacheKey);
-    
-    // Dynamic TTL based on endpoint
     const LONG_LIV_ENDPOINTS = ['hotTrend', 'extends/libSrch', 'monthlyKeywords'];
     const currentTTL = LONG_LIV_ENDPOINTS.some(ep => endpoint.includes(ep))
-      ? 60 * 60 * 1000 // 1 hour for popular/new books
-      : this.CACHE_TTL; // 5 mins for others
+      ? 60 * 60 * 1000 
+      : this.CACHE_TTL;
 
     if (cached && Date.now() - cached.timestamp < currentTTL) {
       return cached.data as T;
@@ -47,19 +57,55 @@ export class LibraryApiClient {
       }
     });
 
-    // 3. Execute request with Retry Logic
+    // 3. Execute request
     const requestPromise = (async () => {
       try {
         let attempts = 0;
         const MAX_RETRIES = 3;
         const BASE_DELAY = 1000;
+        
+        const isServer = typeof window === 'undefined';
+        const API_KEY = isServer ? process.env.LIBRARY_API_KEY : null;
+        const API_BASE = process.env.NEXT_PUBLIC_LIBRARY_API_BASE || 'http://data4library.kr/api';
+        
+        let requestUrl = url.toString();
+
+        // 🛡️ Server-side Direct Fetch Logic
+        if (isServer && API_KEY) {
+            const directUrl = new URL(`${API_BASE}/${endpoint}`);
+            Object.entries(params).forEach(([key, value]) => {
+                if (value !== undefined && value !== null) {
+                    directUrl.searchParams.append(key, String(value));
+                }
+            });
+            directUrl.searchParams.append('authKey', API_KEY);
+            directUrl.searchParams.append('format', 'json');
+            requestUrl = directUrl.toString();
+        }
 
         while (attempts < MAX_RETRIES) {
           try {
-            const response = await fetch(url.toString());
+            const response = await fetch(requestUrl);
             
+            // Log for Server-side Debugging
+            if (isServer && API_KEY) {
+                const logUrl = requestUrl.replace(API_KEY, '***');
+                try {
+                    const clonedRes = response.clone();
+                    const data = await clonedRes.json();
+                    if (data.response?.error) {
+                        console.error(`[LibraryAPI] ❌ API Error: ${data.response.error} | URL: ${logUrl}`);
+                    } else if (endpoint === 'bookExist' && !data.response?.result) {
+                        console.warn(`[LibraryAPI] ⚠️ No result for bookExist | URL: ${logUrl}`);
+                    } else if (response.ok) {
+                        console.log(`[LibraryAPI] ✅ Success: ${endpoint} | URL: ${logUrl}`);
+                    }
+                } catch (e) {
+                    // Ignore peek errors
+                }
+            }
+
             if (response.status === 429) {
-               console.warn(`[LibraryApiClient] 429 Too Many Requests. Retrying... (${attempts + 1}/${MAX_RETRIES})`);
                const delay = BASE_DELAY * Math.pow(2, attempts);
                await new Promise(resolve => setTimeout(resolve, delay));
                attempts++;
@@ -68,7 +114,6 @@ export class LibraryApiClient {
 
             if (!response.ok) {
               if (response.status >= 500 && attempts < MAX_RETRIES) {
-                 console.warn(`[LibraryApiClient] Server Error ${response.status}. Retrying... (${attempts + 1}/${MAX_RETRIES})`);
                  const delay = BASE_DELAY * Math.pow(2, attempts);
                  await new Promise(resolve => setTimeout(resolve, delay));
                  attempts++;
@@ -78,7 +123,6 @@ export class LibraryApiClient {
             }
 
             const data = await response.json();
-            // Cache success response
             this.cache.set(cacheKey, { data, timestamp: Date.now() });
             return data;
           } catch (error: any) {
@@ -93,7 +137,6 @@ export class LibraryApiClient {
         }
         throw new Error(`API Error: Max retries exceeded for ${endpoint}`);
       } finally {
-        // Remove from pending validation regardless of success/failure
         this.pendingRequests.delete(cacheKey);
       }
     })();
@@ -111,25 +154,33 @@ export class LibraryApiClient {
     region?: string;
     dtl_region?: string;
   }) {
-    // API Spec: srchBooks uses 'title' for keyword search
-    const finalParams = {
-      title: params.keyword,
+    return this.fetch<any>('srchBooks', {
+      keyword: params.keyword,
       pageNo: params.pageNo,
       pageSize: params.pageSize,
       sort: params.sort,
       order: params.order,
       region: params.region,
       dtl_region: params.dtl_region,
-    };
-    return this.fetch<any>('srchBooks', finalParams);
+    });
   }
 
   async getBookDetail(isbn13: string) {
     return this.fetch<any>('srchDtlList', { isbn13, loaninfoYN: 'Y' });
   }
 
-  async checkBookExistence(isbn13: string, libCode: string) {
-    return this.fetch<any>('bookExist', { isbn13, libCode });
+  async checkBookExistence(isbn: string, libCode: string) {
+    if (!isbn || !libCode) return { response: { result: null } }; 
+    
+    // Sanitize ISBN: remove non-alphanumeric characters (keep it simple for now)
+    const sanitizedIsbn = isbn.replace(/[^0-9X]/gi, '');
+    
+    // 🔥 [Fix] bookExist API only accepts 'isbn13' as the parameter name, 
+    // even for 10-digit ISBNs.
+    return this.fetch<any>('bookExist', {
+      libCode,
+      isbn13: sanitizedIsbn
+    });
   }
 
   async searchLibrariesByBook(params: {
@@ -137,8 +188,24 @@ export class LibraryApiClient {
     region?: string;
     dtl_region?: string;
     pageSize?: number;
-  }) {
-    return this.fetch<any>('libSrchByBook', params);
+  }): Promise<{ libraries: Library[]; totalCount: number }> {
+    const response = await this.fetch<any>('libSrchByBook', params);
+    const libs = response.response?.libs?.map((item: any) => ({
+      libCode: item.lib.libCode,
+      libName: item.lib.libName,
+      address: item.lib.address,
+      tel: item.lib.tel,
+      homepage: item.lib.homepage,
+      latitude: item.lib.latitude,
+      longitude: item.lib.longitude,
+      closed: item.lib.closed,
+      operatingTime: item.lib.operatingTime,
+    })) || [];
+
+    return {
+      libraries: libs,
+      totalCount: Number(response.response?.numFound || 0),
+    };
   }
 
   async getLoanItemSearch(params: any) {
