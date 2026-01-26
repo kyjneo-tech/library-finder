@@ -18,6 +18,7 @@ export const BookSchema = z.object({
   loanCnt: z.number().optional(), // 대출 횟수
   ranking: z.number().optional(), // 순위
   additionSymbol: z.string().optional(), // ISBN 부가기호 (대상 정보 등)
+  vol: z.string().optional(), // 도서 권차 (시리즈 번호)
   emotion: z.string().optional(), // 감정 분석 결과 (키즈 모드)
 });
 
